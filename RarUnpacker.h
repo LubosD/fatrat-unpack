@@ -28,7 +28,7 @@ class RarUnpacker : public Unpacker
 {
 Q_OBJECT
 public:
-	RarUnpacker(QString file);
+	RarUnpacker(QString file, QString transferComment);
 	virtual void run();
 	virtual void extract(QList<bool> files, QString where);
 private slots:
@@ -47,6 +47,7 @@ private:
 	qint64 m_nTotal, m_nDone, m_nTotalFile;
 	int m_nPercents, m_nPercentsFile, m_nCurrentFile;
 	QFile m_file;
+	QString m_strCommentArchive, m_strCommentTransfer;
 };
 
 #endif

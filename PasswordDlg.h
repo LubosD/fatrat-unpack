@@ -34,6 +34,9 @@ public:
 	{
 		int r;
 		linePassword->setText(m_strPassword);
+		textArchive->setText(m_strCommentArchive);
+		textTransfer->setText(m_strCommentTransfer);
+		
 		r = QDialog::exec();
 		
 		if(r == QDialog::Accepted)
@@ -42,7 +45,7 @@ public:
 		return r;
 	}
 	
-	QString m_strPassword;
+	QString m_strPassword, m_strCommentArchive, m_strCommentTransfer;
 };
 
 #endif

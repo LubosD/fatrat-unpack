@@ -31,8 +31,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LPARAM unsigned long
 #include "unrar/dll.hpp"
 
-RarUnpacker::RarUnpacker(QString file)
-	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0)
+RarUnpacker::RarUnpacker(QString file, QString cmt)
+	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
+		m_strCommentTransfer(cmt)
 {
 	processArchive();
 }
@@ -75,8 +76,12 @@ void RarUnpacker::processArchive()
 		memset(&oa, 0, sizeof(oa));
 		
 		QByteArray ba = m_strFile.toUtf8();
+		char comment[4*1024] = "";
+		
 		oa.ArcName = (char*) ba.constData();
 		oa.OpenMode = RAR_OM_LIST;
+		oa.CmtBuf = comment;
+		oa.CmtBufSize = sizeof(comment);
 		
 		handle = RAROpenArchive(&oa);
 		if(!handle)
@@ -107,6 +112,9 @@ void RarUnpacker::processArchive()
 			RARProcessFile(handle, RAR_SKIP, 0, 0);
 		}
 		
+		if(oa.CmtState == 1 || oa.CmtState == ERAR_SMALL_BUF)
+			m_strCommentArchive = QString::fromUtf8(comment, oa.CmtSize);
+		
 		RARCloseArchive(handle);
 		runDialog(m_files);
 	}
@@ -123,6 +131,8 @@ void RarUnpacker::processArchive()
 void RarUnpacker::askPassword(QByteArray* out)
 {
 	PasswordDlg dlg;
+	dlg.m_strCommentArchive = m_strCommentArchive;
+	dlg.m_strCommentTransfer = m_strCommentTransfer;
 	
 	if(dlg.exec() == QDialog::Accepted)
 		*out = dlg.m_strPassword.toUtf8();

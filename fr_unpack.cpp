@@ -88,7 +88,7 @@ void unpackArchive(Transfer* t, Queue* q)
 		return;
 	}
 	
-	unpacker = new RarUnpacker(transferPath);
+	unpacker = new RarUnpacker(transferPath, t->comment());
 }
 
 void searchDirectory(QString absolute, QString relative, QList<QString>& out)
