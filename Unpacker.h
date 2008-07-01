@@ -51,5 +51,12 @@ protected:
 	QString m_strFile;
 };
 
+struct UnpackerEntry
+{
+	const char* suffix;
+	QThread* (*pCreate)(QString /*file*/, QString /*comment*/);
+	bool (*pSupported)(QString /*file*/);
+};
+
 #endif
 

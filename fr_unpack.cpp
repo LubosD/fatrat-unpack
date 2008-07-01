@@ -24,12 +24,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QFileInfo>
 #include <QMessageBox>
 #include "RarUnpacker.h"
+#include "FilesDlg.h"
 
-const char* g_archiveSuffixes[] = { ".rar", 0 };
+UnpackerEntry g_archivators[] = { { ".rar", RarUnpacker::create, RarUnpacker::supported } };
+
+struct ArchiveEntry
+{
+	QString path;
+	UnpackerEntry* unpacker;
+};
 
 void unpackArchive(Transfer* t, Queue* q);
-static void searchDirectory(QString absolute, QString relative, QList<QString>& out);
-static bool isArchive(QString name);
+static void searchDirectory(QString absolute, QString relative, QList<ArchiveEntry>& out);
+static UnpackerEntry* isArchive(QString name);
 
 __attribute__ ((constructor)) void init()
 {
@@ -59,24 +66,23 @@ void unpackArchive(Transfer* t, Queue* q)
 	QString transferPath = t->dataPath(true);
 	QString dest;
 	QFileInfo finfo(transferPath);
-	QThread* unpacker;
+	UnpackerEntry* unpacker = 0;
 	
 	if(!finfo.exists())
 		return;
 	
 	if(!finfo.isDir())
 	{
-		bool bIsArchive = false;
-		for(size_t i=0;g_archiveSuffixes[i];i++)
+		for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 		{
-			if(transferPath.endsWith(g_archiveSuffixes[0], Qt::CaseInsensitive))
+			if(transferPath.endsWith(g_archivators[i].suffix, Qt::CaseInsensitive))
 			{
-				bIsArchive = true;
+				unpacker = &g_archivators[i];
 				break;
 			}
 		}
 		
-		if(!bIsArchive)
+		if(!unpacker)
 		{
 			QMessageBox::critical(getMainWindow(), QObject::tr("Unpack an archive"), QObject::tr("This file is not a supported archive!"));
 			return;
@@ -84,14 +90,40 @@ void unpackArchive(Transfer* t, Queue* q)
 	}
 	else
 	{
-		QMessageBox::critical(getMainWindow(), QObject::tr("Unpack an archive"), "This plugin is a work in progress!");
-		return;
+		QList<ArchiveEntry> eligible;
+		searchDirectory(transferPath+'/', "/", eligible);
+		
+		if(eligible.isEmpty())
+		{
+			QMessageBox::warning(getMainWindow(), QObject::tr("Unpack an archive"), QObject::tr("No supported archives found."));
+			return;
+		}
+		else if(eligible.size() == 1)
+		{
+			transferPath = eligible[0].path;
+			unpacker = eligible[0].unpacker;
+		}
+		else
+		{
+			FilesDlg dlg(getMainWindow());
+			QDir dir(transferPath);
+			
+			for(int i=0;i<eligible.size();i++)
+				dlg.listArchives->addItem(dir.relativeFilePath(eligible[i].path));
+			
+			if(dlg.exec() != QDialog::Accepted || dlg.listArchives->currentRow() < 0)
+				return;
+			
+			int ix = dlg.listArchives->currentRow();
+			transferPath = eligible[ix].path;
+			unpacker = eligible[ix].unpacker;
+		}
 	}
 	
-	unpacker = new RarUnpacker(transferPath, t->comment());
+	unpacker->pCreate(transferPath, t->comment());
 }
 
-void searchDirectory(QString absolute, QString relative, QList<QString>& out)
+void searchDirectory(QString absolute, QString relative, QList<ArchiveEntry>& out)
 {
 	QDir dir(absolute);
 	QFileInfoList list = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
@@ -102,19 +134,25 @@ void searchDirectory(QString absolute, QString relative, QList<QString>& out)
 			searchDirectory(absolute+info.fileName()+'/', relative+info.fileName()+'/', out);
 		else if(!info.isSymLink())
 		{
-			if(isArchive(info.fileName()))
-				out << QString(relative+info.fileName());
+			UnpackerEntry* ue = isArchive(info.absoluteFilePath());
+			if(!ue)
+				continue;
+			
+			ArchiveEntry ae;
+			ae.path = info.absoluteFilePath();
+			ae.unpacker = ue;
+			out << ae;
 		}
 	}
 }
 
-bool isArchive(QString name)
+UnpackerEntry* isArchive(QString name)
 {
-	for(size_t i=0;g_archiveSuffixes[i];i++)
+	for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 	{
-		if(name.endsWith(g_archiveSuffixes[0], Qt::CaseInsensitive))
-			return true;
+		if(name.endsWith(g_archivators[i].suffix, Qt::CaseInsensitive) && g_archivators[i].pSupported(name))
+			return &g_archivators[i];
 	}
-	return false;
+	return 0;
 }
 

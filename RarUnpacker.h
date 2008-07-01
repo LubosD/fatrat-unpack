@@ -29,6 +29,9 @@ class RarUnpacker : public Unpacker
 Q_OBJECT
 public:
 	RarUnpacker(QString file, QString transferComment);
+	static QThread* create(QString file, QString transferComment) { return new RarUnpacker(file, transferComment); }
+	static bool supported(QString file);
+	
 	virtual void run();
 	virtual void extract(QList<bool> files, QString where);
 private slots:

@@ -52,6 +52,7 @@ set(fr_unpack_UIS
 	ProgressWidget.ui
 	PasswordDlg.ui
 	UnpackDlg.ui
+	FilesDlg.ui
 	)
 
 qt4_wrap_cpp(fr_unpack_MOC_SRCS ${fr_unpack_MOC_HDRS})

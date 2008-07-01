@@ -31,6 +31,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define LPARAM unsigned long
 #include "unrar/dll.hpp"
 
+static QRegExp g_re("\\.part\\d+");
+
 RarUnpacker::RarUnpacker(QString file, QString cmt)
 	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
 		m_strCommentTransfer(cmt)
@@ -38,10 +40,18 @@ RarUnpacker::RarUnpacker(QString file, QString cmt)
 	processArchive();
 }
 
+bool RarUnpacker::supported(QString file)
+{
+	int x = g_re.indexIn(file);
+	if(x < 0)
+		return true;
+	else
+		return g_re.cap(1).toInt() == 1;
+}
+
 QString RarUnpacker::processFileName(QString file)
 {
-	QRegExp re("\\.part\\d+");
-	int x = re.indexIn(file);
+	int x = g_re.indexIn(file);
 	if(x != -1)
 	{
 		int i;
