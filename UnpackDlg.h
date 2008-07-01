@@ -18,35 +18,37 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef RARUNPACKER_H
-#define RARUNPACKER_H
-#include "Unpacker.h"
-#include <QByteArray>
-#include <QDir>
+#ifndef UNPACKDLG_H
+#define UNPACKDLG_H
+#include <QDialog>
+#include <QList>
+#include "ui_UnpackDlg.h"
 
-class RarUnpacker : public Unpacker
+struct FileEntry
+{
+	QString name;
+	qint64 size;
+};
+
+class UnpackDlg : public QDialog, public Ui_UnpackDlg
 {
 Q_OBJECT
 public:
-	RarUnpacker(QString file);
-	virtual void run();
-	virtual void extract(QList<bool> files, QString where);
-private slots:
-	void askPassword(QByteArray* out);
-	void showError(QString error);
+	UnpackDlg(QWidget* parent = 0);
+	void load(const QList<FileEntry>& files);
+	int exec();
+	QList<bool> getStates() const;
+	void setFileProgress(int index, int progress);
+protected:
+	void recursiveUpdate(QTreeWidgetItem* item);
+	qint64 recursiveUpdateDown(QTreeWidgetItem* item);
+	void recursiveCheck(QTreeWidgetItem* item, Qt::CheckState state);
+	virtual void closeEvent(QCloseEvent* event);
+protected slots:
+	void fileItemChanged(QTreeWidgetItem* item, int column);
 private:
-	static QString processFileName(QString name);
-	static int rarCallback(unsigned msg, unsigned long tthis, unsigned long p1, unsigned long p2);
-	void processArchive();
-private:
-	QByteArray m_strPassword;
-	QDir m_dirDestination;
-	
-	QList<FileEntry> m_files;
-	QList<bool> m_filesValues;
-	qint64 m_nTotal, m_nDone, m_nTotalFile;
-	int m_nPercents, m_nPercentsFile, m_nCurrentFile;
-	QFile m_file;
+	QList<QTreeWidgetItem*> m_files;
+	bool m_bUpdating;
 };
 
 #endif

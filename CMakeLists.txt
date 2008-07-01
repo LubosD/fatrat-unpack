@@ -39,15 +39,19 @@ set(fr_unpack_SRCS
 	fr_unpack.cpp
 	Unpacker.cpp
 	RarUnpacker.cpp
+	UnpackDlg.cpp
 	)
 
 set(fr_unpack_MOC_HDRS
 	RarUnpacker.h
+	UnpackDlg.h
+	Unpacker.h
 	)
 
 set(fr_unpack_UIS
 	ProgressWidget.ui
 	PasswordDlg.ui
+	UnpackDlg.ui
 	)
 
 qt4_wrap_cpp(fr_unpack_MOC_SRCS ${fr_unpack_MOC_HDRS})

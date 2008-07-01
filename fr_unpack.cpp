@@ -22,7 +22,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fatrat/Transfer.h>
 #include <QDir>
 #include <QFileInfo>
-#include <QFileDialog>
 #include <QMessageBox>
 #include "RarUnpacker.h"
 
@@ -89,12 +88,7 @@ void unpackArchive(Transfer* t, Queue* q)
 		return;
 	}
 	
-	dest = QFileDialog::getExistingDirectory(getMainWindow(), QObject::tr("Unpack an archive"), transferPath);
-	if(dest.isEmpty())
-		return;
-	
-	unpacker = new RarUnpacker(transferPath, dest);
-	unpacker->start();
+	unpacker = new RarUnpacker(transferPath);
 }
 
 void searchDirectory(QString absolute, QString relative, QList<QString>& out)
