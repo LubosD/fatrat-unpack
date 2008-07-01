@@ -188,6 +188,7 @@ int RarUnpacker::rarCallback(unsigned msg, unsigned long tthis, unsigned long p1
 		{
 			QString error = tr("Volume %1 not found").arg(target);
 			QMetaObject::invokeMethod(This, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
+			return -1;
 		}
 		else if(p2 == RAR_VOL_NOTIFY)
 		{
