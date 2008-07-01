@@ -257,7 +257,7 @@ void RarUnpacker::run()
 			m_nTotalFile = m_files[i].size;
 			m_nCurrentFile = i;
 			
-			e = RARProcessFile(handle, RAR_EXTRACT, 0, 0);
+			e = RARProcessFile(handle, RAR_TEST, 0, 0);
 			m_file.close();
 			
 			if(m_bAbort)
