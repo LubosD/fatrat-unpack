@@ -1,4 +1,5 @@
-project(fr_czshare)
+project(fr_unpack)
+add_subdirectory(unrar)
 
 cmake_minimum_required(VERSION 2.4.0)
 if(COMMAND cmake_policy)
@@ -9,11 +10,11 @@ find_package(Qt4 REQUIRED)
 
 set(CMAKE_MODULE_PATH cmake_modules)
 
-set(QT_USE_QTNETWORK TRUE)
-set(QT_USE_QTXML TRUE)
-
 set(fatrat_DIR ${CMAKE_MODULE_PATH})
 find_package(fatrat REQUIRED)
+
+set(QT_USE_QTNETWORK TRUE)
+set(QT_USE_QTXML TRUE)
 
 if(FATRAT_FOUND)
 	message(STATUS "fatrat found OK")
@@ -24,6 +25,7 @@ endif(FATRAT_FOUND)
 
 include( ${QT_USE_FILE} )
 add_definitions(${QT_DEFINITIONS})
+add_definitions(-fvisibility=hidden)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	ADD_DEFINITIONS(-ggdb)
@@ -33,33 +35,33 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 include_directories(./ ${CMAKE_CURRENT_BINARY_DIR} ${QT_INCLUDE_DIR})
 
-set(fr_opensubtitles_SRCS
-	fr_opensubtitles.cpp
-	XmlRpc.cpp
-	SubtitlesDlg.cpp
-	SettingsSubtitles.cpp
+set(fr_unpack_SRCS
+	fr_unpack.cpp
+	Unpacker.cpp
+	RarUnpacker.cpp
 	)
 
-set(fr_opensubtitles_MOC_HDRS
-	SubtitlesDlg.h
+set(fr_unpack_MOC_HDRS
+	RarUnpacker.h
 	)
 
-set(fr_opensubtitles_UIS
-	SubtitlesDlg.ui
-	SettingsSubtitles.ui
+set(fr_unpack_UIS
+	ProgressWidget.ui
+	PasswordDlg.ui
 	)
 
-qt4_wrap_cpp(fr_opensubtitles_MOC_SRCS ${fr_opensubtitles_MOC_HDRS})
+qt4_wrap_cpp(fr_unpack_MOC_SRCS ${fr_unpack_MOC_HDRS})
 
-set(fr_opensubtitles_RCS
-	gfx/opensubtitles.qrc
+set(fr_unpack_RCS
+	#gfx/opensubtitles.qrc
 )
 
-qt4_wrap_ui(fr_opensubtitles_UIS_H ${fr_opensubtitles_UIS})
-qt4_add_resources(fr_opensubtitles_QRC_H gfx/opensubtitles.qrc)
+qt4_wrap_ui(fr_unpack_UIS_H ${fr_unpack_UIS})
+#qt4_add_resources(fr_unpack_QRC_H gfx/opensubtitles.qrc)
 
-add_library(fr_opensubtitles SHARED ${fr_opensubtitles_SRCS} ${fr_opensubtitles_MOC_SRCS} ${fr_opensubtitles_UIS_H} ${fr_opensubtitles_QRC_H})
+add_library(fr_unpack SHARED ${fr_unpack_SRCS} ${fr_unpack_MOC_SRCS} ${fr_unpack_UIS_H} ${fr_unpack_QRC_H})
+#add_dependencies(fr_unpack unrar)
 
-target_link_libraries(fr_opensubtitles ${QT_LIBRARIES} -lz)
+target_link_libraries(fr_unpack ${QT_LIBRARIES} unrar)
 
-install(TARGETS fr_opensubtitles DESTINATION lib/fatrat/plugins)
+install(TARGETS fr_unpack DESTINATION lib/fatrat/plugins)
