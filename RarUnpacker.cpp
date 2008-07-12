@@ -79,7 +79,6 @@ void RarUnpacker::processArchive()
 {
 	HANDLE handle;
 	RAROpenArchiveData oa;
-	RARHeaderData hd;
 
 	try
 	{
@@ -102,9 +101,10 @@ void RarUnpacker::processArchive()
 		while(true)
 		{
 			int r;
+                        RARHeaderDataEx hd;
 			memset(&hd, 0, sizeof(hd));
 			
-			r = RARReadHeader(handle, &hd);
+			r = RARReadHeaderEx(handle, &hd);
 			
 			if(r == ERAR_END_ARCHIVE)
 				break;
@@ -116,6 +116,7 @@ void RarUnpacker::processArchive()
 			FileEntry file;
 			file.name = QString::fromUtf8(hd.FileName);
 			file.size = hd.UnpSize;
+			file.size += qint64(hd.UnpSizeHigh) << 32;
 			
 			m_files << file;
 			
