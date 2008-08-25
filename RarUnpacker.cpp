@@ -254,7 +254,7 @@ void RarUnpacker::run()
 				throw tr("Unable to open %1 for writing.").arg(fpath);
 			
 			setToolTip(tr("Extracting %1...").arg(m_files[i].name));
-			m_nPercentsFile = 0;
+			m_nPercentsFile = -1;
 			m_nTotalFile = m_files[i].size;
 			m_nCurrentFile = i;
 			

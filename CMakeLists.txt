@@ -1,4 +1,4 @@
-project(fr_unpack)
+project(fatrat-unpack)
 add_subdirectory(unrar)
 
 cmake_minimum_required(VERSION 2.4.0)
@@ -35,38 +35,38 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 include_directories(./ ${CMAKE_CURRENT_BINARY_DIR} ${QT_INCLUDE_DIR})
 
-set(fr_unpack_SRCS
+set(fatrat-unpack_SRCS
 	fr_unpack.cpp
 	Unpacker.cpp
 	RarUnpacker.cpp
 	UnpackDlg.cpp
 	)
 
-set(fr_unpack_MOC_HDRS
+set(fatrat-unpack_MOC_HDRS
 	RarUnpacker.h
 	UnpackDlg.h
 	Unpacker.h
 	)
 
-set(fr_unpack_UIS
+set(fatrat-unpack_UIS
 	ProgressWidget.ui
 	PasswordDlg.ui
 	UnpackDlg.ui
 	FilesDlg.ui
 	)
 
-qt4_wrap_cpp(fr_unpack_MOC_SRCS ${fr_unpack_MOC_HDRS})
+qt4_wrap_cpp(fatrat-unpack_MOC_SRCS ${fatrat-unpack_MOC_HDRS})
 
-set(fr_unpack_RCS
+set(fatrat-unpack_RCS
 	#gfx/opensubtitles.qrc
 )
 
-qt4_wrap_ui(fr_unpack_UIS_H ${fr_unpack_UIS})
-#qt4_add_resources(fr_unpack_QRC_H gfx/opensubtitles.qrc)
+qt4_wrap_ui(fatrat-unpack_UIS_H ${fatrat-unpack_UIS})
+#qt4_add_resources(fatrat-unpack_QRC_H gfx/opensubtitles.qrc)
 
-add_library(fr_unpack SHARED ${fr_unpack_SRCS} ${fr_unpack_MOC_SRCS} ${fr_unpack_UIS_H} ${fr_unpack_QRC_H})
-#add_dependencies(fr_unpack unrar)
+add_library(fatrat-unpack SHARED ${fatrat-unpack_SRCS} ${fatrat-unpack_MOC_SRCS} ${fatrat-unpack_UIS_H} ${fatrat-unpack_QRC_H})
+#add_dependencies(fatrat-unpack unrar)
 
-target_link_libraries(fr_unpack ${QT_LIBRARIES} unrar)
+target_link_libraries(fatrat-unpack ${QT_LIBRARIES} unrar)
 
-install(TARGETS fr_unpack DESTINATION lib/fatrat/plugins)
+install(TARGETS fatrat-unpack DESTINATION lib/fatrat/plugins)
