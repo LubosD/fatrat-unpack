@@ -20,9 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include <fatrat/fatrat.h>
 #include <fatrat/Transfer.h>
+
 #include <QDir>
+#include <QTranslator>
+#include <QLocale>
 #include <QFileInfo>
 #include <QMessageBox>
+
+#include "config.h"
 #include "RarUnpacker.h"
 #include "FilesDlg.h"
 
@@ -41,6 +46,15 @@ static UnpackerEntry* isArchive(QString name);
 __attribute__ ((constructor)) void init()
 {
 	//Q_INIT_RESOURCE(unpack);
+	
+#ifdef WITH_NLS
+	static QTranslator translator;
+	{
+		QString fname = QString("fatrat-unpack_") + QLocale::system().name();
+		translator.load(fname, getDataFileDir("/lang", fname));
+		QCoreApplication::installTranslator(&translator);
+	}
+#endif
 	
 	MenuAction action;
 	

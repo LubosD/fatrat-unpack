@@ -21,9 +21,6 @@
     <height>16</height>
    </size>
   </property>
-  <property name="windowTitle" >
-   <string>Form</string>
-  </property>
   <widget class="QProgressBar" name="progressBar" >
    <property name="geometry" >
     <rect>

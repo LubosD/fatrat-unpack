@@ -34,6 +34,7 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 include_directories(./ ${CMAKE_CURRENT_BINARY_DIR} ${QT_INCLUDE_DIR})
+CONFIGURE_FILE(config.h.in config.h)
 
 set(fatrat-unpack_SRCS
 	fr_unpack.cpp
@@ -62,11 +63,15 @@ set(fatrat-unpack_RCS
 )
 
 qt4_wrap_ui(fatrat-unpack_UIS_H ${fatrat-unpack_UIS})
-#qt4_add_resources(fatrat-unpack_QRC_H gfx/opensubtitles.qrc)
+qt4_add_translation(lrelease_outputs locale/fatrat-unpack_cs_CZ.ts)
 
-add_library(fatrat-unpack SHARED ${fatrat-unpack_SRCS} ${fatrat-unpack_MOC_SRCS} ${fatrat-unpack_UIS_H} ${fatrat-unpack_QRC_H})
+add_library(fatrat-unpack SHARED ${fatrat-unpack_SRCS} ${fatrat-unpack_MOC_SRCS} ${fatrat-unpack_UIS_H} ${fatrat-unpack_QRC_H} ${lrelease_outputs})
 #add_dependencies(fatrat-unpack unrar)
 
 target_link_libraries(fatrat-unpack ${QT_LIBRARIES} unrar)
+
+if(WITH_NLS)
+	install(FILES ${lrelease_outputs} DESTINATION share/fatrat/lang)
+endif(WITH_NLS)
 
 install(TARGETS fatrat-unpack DESTINATION lib/fatrat/plugins)
