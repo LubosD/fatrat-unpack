@@ -63,7 +63,7 @@ set(fatrat-unpack_RCS
 )
 
 qt4_wrap_ui(fatrat-unpack_UIS_H ${fatrat-unpack_UIS})
-qt4_add_translation(lrelease_outputs locale/fatrat-unpack_cs_CZ.ts)
+qt4_add_translation(lrelease_outputs locale/fatrat-unpack_cs_CZ.ts locale/fatrat-unpack_sk_SK.ts)
 
 add_library(fatrat-unpack SHARED ${fatrat-unpack_SRCS} ${fatrat-unpack_MOC_SRCS} ${fatrat-unpack_UIS_H} ${fatrat-unpack_QRC_H} ${lrelease_outputs})
 #add_dependencies(fatrat-unpack unrar)
