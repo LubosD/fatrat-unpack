@@ -10,6 +10,10 @@ find_package(Qt4 REQUIRED)
 
 set(CMAKE_MODULE_PATH cmake_modules)
 
+if(WITH_EVERYTHING)
+	set(WITH_NLS ON)
+endif(WITH_EVERYTHING)
+
 set(fatrat_DIR ${CMAKE_MODULE_PATH})
 find_package(fatrat REQUIRED)
 
