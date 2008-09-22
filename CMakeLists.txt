@@ -79,3 +79,11 @@ if(WITH_NLS)
 endif(WITH_NLS)
 
 install(TARGETS fatrat-unpack DESTINATION lib/fatrat/plugins)
+
+install(FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/data/LICENSE.txt
+	${CMAKE_CURRENT_SOURCE_DIR}/data/TRANSLATIONS.txt
+	${CMAKE_CURRENT_SOURCE_DIR}/data/3RDPARTIES.txt
+	DESTINATION share/fatrat/data/plugins/fatrat-unpack
+	)
+
