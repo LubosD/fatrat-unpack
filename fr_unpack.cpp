@@ -30,8 +30,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "config.h"
 #include "RarUnpacker.h"
 #include "FilesDlg.h"
+#ifdef WITH_ZIP
+#	include "ZipUnpacker.h"
+#endif
 
-UnpackerEntry g_archivators[] = { { ".rar", RarUnpacker::create, RarUnpacker::supported } };
+UnpackerEntry g_archivators[] = {
+		{ ".rar", RarUnpacker::create, RarUnpacker::supported },
+#ifdef WITH_ZIP
+		{ ".zip", ZipUnpacker::create, ZipUnpacker::supported },
+#endif
+};
 
 struct ArchiveEntry
 {

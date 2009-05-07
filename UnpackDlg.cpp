@@ -90,6 +90,8 @@ void UnpackDlg::load(const QList<FileEntry>& files)
 		}
 		
 		// fill in info
+		if(item->text(0).isEmpty())
+			item->setHidden(true);
 		item->setText(1, formatSize(files[i].size));
 		item->setData(1, Qt::UserRole, qint64(files[i].size));
 		m_files << item;

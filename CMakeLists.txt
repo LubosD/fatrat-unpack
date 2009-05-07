@@ -27,6 +27,18 @@ else(FATRAT_FOUND)
 	message(FATAL_ERROR "No FatRat development headers found")
 endif(FATRAT_FOUND)
 
+if(WITH_ZIP)
+	set(libzip_DIR ${CMAKE_MODULE_PATH})
+	find_package(libzip REQUIRED)
+	
+	if(LIBZIP_FOUND)
+		message(STATUS "libzip found OK: ${LIBZIP_LIBRARY}")
+		include_directories(${LIBZIP_INCLUDE_DIRS})
+	else(LIBZIP_FOUND)
+		message(FATAL_ERROR "No libzip")
+	endif(LIBZIP_FOUND)
+endif(WITH_ZIP)
+
 include( ${QT_USE_FILE} )
 add_definitions(${QT_DEFINITIONS})
 add_definitions(-fvisibility=hidden)
@@ -60,6 +72,13 @@ set(fatrat-unpack_UIS
 	FilesDlg.ui
 	)
 
+if(WITH_ZIP)
+	set(fatrat-unpack_SRCS
+		${fatrat-unpack_SRCS}
+		ZipUnpacker.cpp
+	)
+endif(WITH_ZIP)
+
 qt4_wrap_cpp(fatrat-unpack_MOC_SRCS ${fatrat-unpack_MOC_HDRS})
 
 set(fatrat-unpack_RCS
@@ -72,7 +91,7 @@ qt4_add_translation(lrelease_outputs locale/fatrat-unpack_cs_CZ.ts locale/fatrat
 add_library(fatrat-unpack SHARED ${fatrat-unpack_SRCS} ${fatrat-unpack_MOC_SRCS} ${fatrat-unpack_UIS_H} ${fatrat-unpack_QRC_H} ${lrelease_outputs})
 #add_dependencies(fatrat-unpack unrar)
 
-target_link_libraries(fatrat-unpack ${QT_LIBRARIES} unrar)
+target_link_libraries(fatrat-unpack ${QT_LIBRARIES} ${LIBZIP_LIBRARY} unrar)
 
 if(WITH_NLS)
 	install(FILES ${lrelease_outputs} DESTINATION share/fatrat/lang)
