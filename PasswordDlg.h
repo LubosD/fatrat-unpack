@@ -25,10 +25,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class PasswordDlg : public QDialog, public Ui_PasswordDlg
 {
+Q_OBJECT
 public:
 	PasswordDlg(QWidget* parent = 0) : QDialog(parent)
 	{
 		setupUi(this);
+		connect(pushFillIn, SIGNAL(clicked()), this, SLOT(fillIn()));
 	}
 	int exec()
 	{
@@ -44,7 +46,17 @@ public:
 		
 		return r;
 	}
-	
+private slots:
+	void fillIn()
+	{
+		QTextBrowser* brs;
+		if(tabWidget->currentIndex() == 0)
+			brs = textTransfer;
+		else
+			brs = textArchive;
+		linePassword->setText(brs->toPlainText().trimmed());
+	}
+public:
 	QString m_strPassword, m_strCommentArchive, m_strCommentTransfer;
 };
 

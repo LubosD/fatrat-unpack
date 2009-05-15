@@ -63,6 +63,7 @@ set(fatrat-unpack_MOC_HDRS
 	RarUnpacker.h
 	UnpackDlg.h
 	Unpacker.h
+	PasswordDlg.h
 	)
 
 set(fatrat-unpack_UIS
