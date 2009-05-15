@@ -64,6 +64,7 @@ set(fatrat-unpack_MOC_HDRS
 	UnpackDlg.h
 	Unpacker.h
 	PasswordDlg.h
+	PipeDlg.h
 	)
 
 set(fatrat-unpack_UIS
@@ -71,6 +72,7 @@ set(fatrat-unpack_UIS
 	PasswordDlg.ui
 	UnpackDlg.ui
 	FilesDlg.ui
+	PipeDlg.ui
 	)
 
 if(WITH_ZIP)
@@ -104,6 +106,7 @@ install(FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/data/LICENSE.txt
 	${CMAKE_CURRENT_SOURCE_DIR}/data/TRANSLATIONS.txt
 	${CMAKE_CURRENT_SOURCE_DIR}/data/3RDPARTIES.txt
+	${CMAKE_CURRENT_SOURCE_DIR}/data/pipecmds
 	DESTINATION share/fatrat/data/plugins/fatrat-unpack
 	)
 

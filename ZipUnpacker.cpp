@@ -182,3 +182,7 @@ void ZipUnpacker::extract(QList<bool> files, QString where)
 	start();
 }
 
+void ZipUnpacker::pipe(int fileIndex, QProcess* process)
+{
+}
+

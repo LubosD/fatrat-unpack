@@ -43,6 +43,7 @@ protected:
 	void recursiveUpdate(QTreeWidgetItem* item);
 	qint64 recursiveUpdateDown(QTreeWidgetItem* item);
 	void recursiveCheck(QTreeWidgetItem* item, Qt::CheckState state);
+	void updatePipeButton();
 	virtual void closeEvent(QCloseEvent* event);
 protected slots:
 	void fileItemChanged(QTreeWidgetItem* item, int column);

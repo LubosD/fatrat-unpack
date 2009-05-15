@@ -105,6 +105,7 @@ void UnpackDlg::load(const QList<FileEntry>& files)
 	
 	recursiveUpdateDown(treeFiles->invisibleRootItem());
 	treeFiles->expandAll();
+	updatePipeButton();
 }
 
 QList<bool> UnpackDlg::getStates() const
@@ -141,6 +142,14 @@ void UnpackDlg::fileItemChanged(QTreeWidgetItem* item, int column)
 		recursiveUpdate(parent);
 	
 	m_bUpdating = false;
+	
+	updatePipeButton();
+}
+
+void UnpackDlg::updatePipeButton()
+{
+	QList<bool> data = getStates();
+	pushPipe->setEnabled(data.count(true) == 1);
 }
 
 void UnpackDlg::recursiveUpdate(QTreeWidgetItem* item)

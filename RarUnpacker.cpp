@@ -35,9 +35,15 @@ static QRegExp g_re("\\.part\\d+");
 
 RarUnpacker::RarUnpacker(QString file, QString cmt)
 	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
-		m_strCommentTransfer(cmt)
+		   m_strCommentTransfer(cmt), m_pipe(0), m_nFileIndex(-1)
 {
 	processArchive();
+}
+
+RarUnpacker::~RarUnpacker()
+{
+	//if(m_pipe)
+	//	m_pipe->deleteLater();
 }
 
 bool RarUnpacker::supported(QString file)
@@ -71,6 +77,15 @@ void RarUnpacker::extract(QList<bool> files, QString where)
 		if(m_filesValues[i])
 			m_nTotal += m_files[i].size;
 	}
+	
+	start();
+}
+
+void RarUnpacker::pipe(int fileIndex, QProcess* process)
+{
+	m_pipe = process;
+	m_nFileIndex = fileIndex;
+	m_nTotal = m_files[fileIndex].size;
 	
 	start();
 }
@@ -176,7 +191,13 @@ int RarUnpacker::rarCallback(unsigned msg, unsigned long tthis, unsigned long p1
 	}
 	else if(msg == UCM_PROCESSDATA)
 	{
-		This->m_file.write(target, p2);
+		if(!This->m_pipe)
+			This->m_file.write(target, p2);
+		else
+		{
+			This->m_pipe->write(target, p2);
+			This->m_pipe->waitForBytesWritten(-1);
+		}
 		This->m_nDone += p2;
 		
 		if(This->m_nTotal)
@@ -232,39 +253,69 @@ void RarUnpacker::run()
 		RARSetPassword(handle, m_strPassword.data());
 		RARSetCallback(handle, rarCallback, (LPARAM) this);
 		
-		for(int i=0;i<m_files.size();i++)
+		if(m_pipe == 0)
 		{
-			int e;
-			
-			e = RARReadHeader(handle, &hd);
-			if(!m_filesValues[i] || !m_files[i].size)
+			for(int i=0;i<m_files.size();i++)
 			{
-				RARProcessFile(handle, RAR_SKIP, 0, 0);
-				continue;
+				int e;
+				
+				e = RARReadHeader(handle, &hd);
+				if(!m_filesValues[i] || !m_files[i].size)
+				{
+					RARProcessFile(handle, RAR_SKIP, 0, 0);
+					continue;
+				}
+				
+				QString fpath = m_dirDestination.filePath(m_files[i].name);
+				m_file.setFileName(fpath);
+				
+				int l = m_files[i].name.lastIndexOf('/');
+				if(l != -1)
+					m_dirDestination.mkpath(m_files[i].name.left(l));
+				
+				if(!m_file.open(QIODevice::WriteOnly))
+					throw tr("Unable to open %1 for writing.").arg(fpath);
+				
+				setToolTip(tr("Extracting %1...").arg(m_files[i].name));
+				m_nPercentsFile = -1;
+				m_nTotalFile = m_files[i].size;
+				m_nCurrentFile = i;
+				
+				e = RARProcessFile(handle, RAR_TEST, 0, 0);
+				m_file.close();
+				
+				if(m_bAbort)
+					throw QString();
+				else if(e)
+					throw tr("Cannot read the archive: %1.").arg(e);
 			}
-			
-			QString fpath = m_dirDestination.filePath(m_files[i].name);
-			m_file.setFileName(fpath);
-			
-			int l = m_files[i].name.lastIndexOf('/');
-			if(l != -1)
-				m_dirDestination.mkpath(m_files[i].name.left(l));
-			
-			if(!m_file.open(QIODevice::WriteOnly))
-				throw tr("Unable to open %1 for writing.").arg(fpath);
-			
-			setToolTip(tr("Extracting %1...").arg(m_files[i].name));
-			m_nPercentsFile = -1;
-			m_nTotalFile = m_files[i].size;
-			m_nCurrentFile = i;
-			
-			e = RARProcessFile(handle, RAR_TEST, 0, 0);
-			m_file.close();
-			
-			if(m_bAbort)
-				throw QString();
-			else if(e)
-				throw tr("Cannot read the archive: %1.").arg(e);
+		}
+		else
+		{
+			for(int i=0;i<m_files.size();i++)
+			{
+				int e;
+				
+				e = RARReadHeader(handle, &hd);
+				if(i != m_nFileIndex)
+				{
+					RARProcessFile(handle, RAR_SKIP, 0, 0);
+					continue;
+				}
+				
+				setToolTip(tr("Piping %1...").arg(m_files[i].name));
+				m_nPercentsFile = -1;
+				m_nTotalFile = m_files[i].size;
+				m_nCurrentFile = i;
+				
+				e = RARProcessFile(handle, RAR_TEST, 0, 0);
+				
+				if(m_bAbort)
+					throw QString();
+				else if(e)
+					throw tr("Cannot read the archive: %1.").arg(e);
+				break;
+			}
 		}
 		
 		RARCloseArchive(handle);

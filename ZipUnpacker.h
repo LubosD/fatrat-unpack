@@ -41,6 +41,7 @@ public:
 	
 	virtual void run();
 	virtual void extract(QList<bool> files, QString where);
+	virtual void pipe(int fileIndex, QProcess* process);
 private:
 	void processArchive();
 	static QString zipError(int code, int scode);

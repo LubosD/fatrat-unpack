@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define UNPACKER_H
 #include <QThread>
 #include <QList>
+#include <QProcess>
 #include "UnpackDlg.h"
 
 class ProgressWidget;
@@ -39,10 +40,12 @@ protected:
 	
 	void runDialog(const QList<FileEntry>& files);
 	virtual void extract(QList<bool> files, QString where) = 0;
+	virtual void pipe(int fileIndex, QProcess* process) = 0;
 protected slots:
 	void unpack();
 	void abort();
 	void minimize();
+	void pipe();
 private:
 	ProgressWidget* m_widget;
 	UnpackDlg m_dialog;

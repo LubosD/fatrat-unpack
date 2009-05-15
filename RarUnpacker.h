@@ -29,11 +29,14 @@ class RarUnpacker : public Unpacker
 Q_OBJECT
 public:
 	RarUnpacker(QString file, QString transferComment);
+	virtual ~RarUnpacker();
+	
 	static QThread* create(QString file, QString transferComment) { return new RarUnpacker(file, transferComment); }
 	static bool supported(QString file);
 	
 	virtual void run();
 	virtual void extract(QList<bool> files, QString where);
+	virtual void pipe(int fileIndex, QProcess* process);
 private slots:
 	void askPassword(QByteArray* out);
 	void showError(QString error);
@@ -51,6 +54,10 @@ private:
 	int m_nPercents, m_nPercentsFile, m_nCurrentFile;
 	QFile m_file;
 	QString m_strCommentArchive, m_strCommentTransfer;
+	
+	// for piping only
+	QProcess* m_pipe;
+	int m_nFileIndex;
 };
 
 #endif

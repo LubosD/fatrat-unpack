@@ -1,7 +1,8 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>UnpackDlg</class>
- <widget class="QDialog" name="UnpackDlg" >
-  <property name="geometry" >
+ <widget class="QDialog" name="UnpackDlg">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,50 +10,57 @@
     <height>322</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>Unpack an archive</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" >
-   <item rowspan="4" row="0" column="0" >
-    <widget class="QTreeWidget" name="treeFiles" >
-     <property name="columnCount" >
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0" rowspan="5">
+    <widget class="QTreeWidget" name="treeFiles">
+     <property name="columnCount">
       <number>0</number>
      </property>
     </widget>
    </item>
-   <item row="0" column="1" >
-    <widget class="QPushButton" name="pushUnpack" >
-     <property name="text" >
+   <item row="0" column="1">
+    <widget class="QPushButton" name="pushUnpack">
+     <property name="text">
       <string>Unpack</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1" >
-    <widget class="QPushButton" name="pushAbort" >
-     <property name="text" >
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pushAbort">
+     <property name="text">
       <string>Cancel</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" >
-    <widget class="QPushButton" name="pushHide" >
-     <property name="text" >
+   <item row="3" column="1">
+    <widget class="QPushButton" name="pushHide">
+     <property name="text">
       <string>Hide</string>
      </property>
     </widget>
    </item>
-   <item row="3" column="1" >
-    <spacer name="verticalSpacer" >
-     <property name="orientation" >
+   <item row="4" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <property name="sizeHint" stdset="0" >
+     <property name="sizeHint" stdset="0">
       <size>
        <width>20</width>
        <height>202</height>
       </size>
      </property>
     </spacer>
+   </item>
+   <item row="1" column="1">
+    <widget class="QPushButton" name="pushPipe">
+     <property name="text">
+      <string>Pipe</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

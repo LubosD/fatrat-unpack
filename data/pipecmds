@@ -1,0 +1,4 @@
+VLC|vlc -
+Xine|xine stdin://
+MPlayer|mplayer -noidx -
+
