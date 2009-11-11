@@ -12,6 +12,7 @@ set(CMAKE_MODULE_PATH cmake_modules)
 
 if(WITH_EVERYTHING)
 	set(WITH_NLS ON)
+	set(WITH_ZIP ON)
 endif(WITH_EVERYTHING)
 
 set(fatrat_DIR ${CMAKE_MODULE_PATH})
