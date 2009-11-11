@@ -103,10 +103,14 @@ endif(WITH_NLS)
 install(TARGETS fatrat-unpack DESTINATION lib/fatrat/plugins)
 
 install(FILES
-	# ${CMAKE_CURRENT_SOURCE_DIR}/data/LICENSE
-	${CMAKE_CURRENT_SOURCE_DIR}/data/TRANSLATIONS
-	${CMAKE_CURRENT_SOURCE_DIR}/data/3RDPARTIES
 	${CMAKE_CURRENT_SOURCE_DIR}/data/pipecmds
 	DESTINATION share/fatrat/data/plugins/fatrat-unpack
 	)
+
+install(FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/TRANSLATIONS
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/3RDPARTIES
+        DESTINATION share/doc/fatrat-unpack
+        )
+
 
