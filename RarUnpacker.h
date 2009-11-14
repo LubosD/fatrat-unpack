@@ -44,6 +44,7 @@ private:
 	static QString processFileName(QString name);
 	static int rarCallback(unsigned msg, unsigned long tthis, unsigned long p1, unsigned long p2);
 	void processArchive();
+	int findFile(QString file);
 private:
 	QByteArray m_strPassword;
 	QDir m_dirDestination;

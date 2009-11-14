@@ -231,6 +231,16 @@ int RarUnpacker::rarCallback(unsigned msg, unsigned long tthis, unsigned long p1
 	return 0;
 }
 
+int RarUnpacker::findFile(QString file)
+{
+	for (int i = 0; i < m_files.size(); i++)
+	{
+		if (file == m_files[i].name)
+			return i;
+	}
+	return -1;
+}
+
 void RarUnpacker::run()
 {
 	HANDLE handle;
@@ -255,11 +265,17 @@ void RarUnpacker::run()
 		
 		if(m_pipe == 0)
 		{
-			for(int i=0;i<m_files.size();i++)
+			while (true)
 			{
-				int e;
+				int e, i;
 				
 				e = RARReadHeader(handle, &hd);
+				if(e == ERAR_END_ARCHIVE)
+					break;
+				i = findFile(QString::fromUtf8(hd.FileName));
+				if (i == -1)
+					continue;
+				
 				if(!m_filesValues[i] || !m_files[i].size)
 				{
 					RARProcessFile(handle, RAR_SKIP, 0, 0);
