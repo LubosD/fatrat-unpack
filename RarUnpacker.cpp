@@ -129,7 +129,7 @@ void RarUnpacker::processArchive()
 				throw tr("Cannot read the archive: %1.").arg(r);
 			
 			FileEntry file;
-			file.name = QString::fromUtf8(hd.FileName);
+			file.name = QString::fromWCharArray(hd.FileNameW);
 			file.size = hd.UnpSize;
 			file.size += qint64(hd.UnpSizeHigh) << 32;
 			
@@ -245,7 +245,7 @@ void RarUnpacker::run()
 {
 	HANDLE handle;
 	RAROpenArchiveData oa;
-	RARHeaderData hd;
+	RARHeaderDataEx hd;
 
 	try
 	{
@@ -269,10 +269,10 @@ void RarUnpacker::run()
 			{
 				int e, i;
 				
-				e = RARReadHeader(handle, &hd);
+				e = RARReadHeaderEx(handle, &hd);
 				if(e == ERAR_END_ARCHIVE)
 					break;
-				i = findFile(QString::fromUtf8(hd.FileName));
+				i = findFile(QString::fromWCharArray(hd.FileNameW));
 				if (i == -1)
 					continue;
 				
@@ -312,7 +312,7 @@ void RarUnpacker::run()
 			{
 				int e;
 				
-				e = RARReadHeader(handle, &hd);
+				e = RARReadHeaderEx(handle, &hd);
 				if(i != m_nFileIndex)
 				{
 					RARProcessFile(handle, RAR_SKIP, 0, 0);
