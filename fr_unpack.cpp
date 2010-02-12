@@ -75,7 +75,7 @@ extern "C" __attribute__((visibility("default"))) PluginInfo getInfo()
 {
 	PluginInfo info;
 	
-	info.version = "1.1.1";
+	info.version = "1.1.2";
 	info.name = QObject::tr("Unpack plugin");
 	info.author = QString::fromUtf8("Luboš Doležel");
 	info.website = "http://fatrat.dolezel.info";
