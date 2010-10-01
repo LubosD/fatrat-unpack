@@ -51,6 +51,11 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 include_directories(./ ${CMAKE_CURRENT_BINARY_DIR} ${QT_INCLUDE_DIR})
+
+IF(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+	SET(CMAKE_INSTALL_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
+ENDIF(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+
 CONFIGURE_FILE(config.h.in config.h)
 
 set(fatrat-unpack_SRCS
@@ -101,7 +106,7 @@ if(WITH_NLS)
 	install(FILES ${lrelease_outputs} DESTINATION share/fatrat/lang)
 endif(WITH_NLS)
 
-install(TARGETS fatrat-unpack DESTINATION lib/fatrat/plugins)
+install(TARGETS fatrat-unpack DESTINATION ${CMAKE_INSTALL_LIBDIR}/fatrat/plugins)
 
 install(FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/data/pipecmds
