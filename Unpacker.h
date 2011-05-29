@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QThread>
 #include <QList>
 #include <QProcess>
+#include <QRegExp>
 #include "UnpackDlg.h"
 
 class ProgressWidget;
@@ -56,7 +57,7 @@ protected:
 
 struct UnpackerEntry
 {
-	const char* suffix;
+	QRegExp re;
 	QThread* (*pCreate)(QString /*file*/, QString /*comment*/);
 	bool (*pSupported)(QString /*file*/);
 };

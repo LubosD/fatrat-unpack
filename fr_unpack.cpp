@@ -33,12 +33,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifdef WITH_ZIP
 #	include "ZipUnpacker.h"
 #endif
+#include "FileConcater.h"
 
-UnpackerEntry g_archivators[] = {
-		{ ".rar", RarUnpacker::create, RarUnpacker::supported },
+static UnpackerEntry g_archivators[] = {
+		{ QRegExp(".+\\.rar", Qt::CaseInsensitive), RarUnpacker::create, RarUnpacker::supported },
 #ifdef WITH_ZIP
-		{ ".zip", ZipUnpacker::create, ZipUnpacker::supported },
+		{ QRegExp(".+\\.zip", Qt::CaseInsensitive), ZipUnpacker::create, ZipUnpacker::supported },
 #endif
+		{ QRegExp(".+\\.\\d{3,4}"), FileConcater::create, FileConcater::supported },
 };
 
 struct ArchiveEntry
@@ -47,7 +49,7 @@ struct ArchiveEntry
 	UnpackerEntry* unpacker;
 };
 
-void unpackArchive(Transfer* t, Queue* q);
+static void unpackArchive(Transfer* t, Queue* q);
 static void searchDirectory(QString absolute, QString relative, QList<ArchiveEntry>& out);
 static UnpackerEntry* isArchive(QString name);
 
@@ -97,7 +99,7 @@ void unpackArchive(Transfer* t, Queue* q)
 	{
 		for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 		{
-			if(transferPath.endsWith(g_archivators[i].suffix, Qt::CaseInsensitive))
+			if(g_archivators[i].re.exactMatch(transferPath))
 			{
 				unpacker = &g_archivators[i];
 				break;
@@ -172,7 +174,7 @@ UnpackerEntry* isArchive(QString name)
 {
 	for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 	{
-		if(name.endsWith(g_archivators[i].suffix, Qt::CaseInsensitive) && g_archivators[i].pSupported(name))
+		if(g_archivators[i].re.exactMatch(name) && g_archivators[i].pSupported(name))
 			return &g_archivators[i];
 	}
 	return 0;

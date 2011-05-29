@@ -63,6 +63,7 @@ set(fatrat-unpack_SRCS
 	Unpacker.cpp
 	RarUnpacker.cpp
 	UnpackDlg.cpp
+	FileConcater.cpp
 	)
 
 set(fatrat-unpack_MOC_HDRS
