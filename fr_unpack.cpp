@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QFileInfo>
 #include <QMessageBox>
 
-#include "config.h"
+#include "unpack_config.h"
 #include "RarUnpacker.h"
 #include "FilesDlg.h"
 #ifdef WITH_ZIP
@@ -36,11 +36,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "FileConcater.h"
 
 static UnpackerEntry g_archivators[] = {
-		{ QRegExp(".+\\.rar", Qt::CaseInsensitive), RarUnpacker::create, RarUnpacker::supported },
+		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.rar"), QRegularExpression::CaseInsensitiveOption), RarUnpacker::create, RarUnpacker::supported },
 #ifdef WITH_ZIP
-		{ QRegExp(".+\\.zip", Qt::CaseInsensitive), ZipUnpacker::create, ZipUnpacker::supported },
+		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.zip"), QRegularExpression::CaseInsensitiveOption), ZipUnpacker::create, ZipUnpacker::supported },
 #endif
-		{ QRegExp(".+\\.\\d{3,4}"), FileConcater::create, FileConcater::supported },
+		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.\\d{3,4}")), FileConcater::create, FileConcater::supported },
 };
 
 struct ArchiveEntry
@@ -61,8 +61,8 @@ __attribute__ ((constructor)) void init()
 	static QTranslator translator;
 	{
 		QString fname = QString("fatrat-unpack_") + QLocale::system().name();
-		translator.load(fname, getDataFileDir("/lang", fname));
-		QCoreApplication::installTranslator(&translator);
+		if(translator.load(fname, getDataFileDir("/lang", fname)))
+			QCoreApplication::installTranslator(&translator);
 	}
 #endif
 	
@@ -77,7 +77,8 @@ extern "C" __attribute__((visibility("default"))) PluginInfo getInfo()
 {
 	PluginInfo info;
 	
-	info.version = "1.1.3";
+	// FatRat warns about plugins whose version differs from its own
+	info.version = VERSION;
 	info.name = QObject::tr("Unpack plugin");
 	info.author = QString::fromUtf8("Luboš Doležel");
 	info.website = "http://fatrat.dolezel.info";
@@ -99,7 +100,7 @@ void unpackArchive(Transfer* t, Queue* q)
 	{
 		for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 		{
-			if(g_archivators[i].re.exactMatch(transferPath))
+			if(g_archivators[i].re.match(transferPath).hasMatch())
 			{
 				unpacker = &g_archivators[i];
 				break;
@@ -174,7 +175,7 @@ UnpackerEntry* isArchive(QString name)
 {
 	for(size_t i=0;i<sizeof(g_archivators)/sizeof(g_archivators[0]);i++)
 	{
-		if(g_archivators[i].re.exactMatch(name) && g_archivators[i].pSupported(name))
+		if(g_archivators[i].re.match(name).hasMatch() && g_archivators[i].pSupported(name))
 			return &g_archivators[i];
 	}
 	return 0;

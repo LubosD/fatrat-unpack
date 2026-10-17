@@ -36,7 +36,6 @@ Q_OBJECT
 public:
 	UnpackDlg(QWidget* parent = 0);
 	void load(const QList<FileEntry>& files);
-	int exec();
 	QList<bool> getStates() const;
 	void setFileProgress(int index, int progress);
 protected:

@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QThread>
 #include <QList>
 #include <QProcess>
-#include <QRegExp>
+#include <QRegularExpression>
 #include "UnpackDlg.h"
 
 class ProgressWidget;
@@ -43,6 +43,8 @@ protected:
 	virtual void extract(QList<bool> files, QString where) = 0;
 	virtual void pipe(int fileIndex, QProcess* process) = 0;
 protected slots:
+	// Safe to call from the extraction thread via a queued invokeMethod
+	void showError(QString error);
 	void unpack();
 	void abort();
 	void minimize();
@@ -57,7 +59,7 @@ protected:
 
 struct UnpackerEntry
 {
-	QRegExp re;
+	QRegularExpression re;
 	QThread* (*pCreate)(QString /*file*/, QString /*comment*/);
 	bool (*pSupported)(QString /*file*/);
 };

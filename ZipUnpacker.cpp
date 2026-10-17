@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QFile>
 
 ZipUnpacker::ZipUnpacker(QString file, QString transferComment)
-	: Unpacker(file), m_strTransferComment(transferComment), m_zip(0), m_nTotal(0)
+	: Unpacker(file), m_strTransferComment(transferComment), m_nTotal(0), m_zip(0)
 {
 	processArchive();
 }
@@ -41,11 +41,18 @@ bool ZipUnpacker::supported(QString file)
 	return true;
 }
 
-QString ZipUnpacker::zipError(int code, int scode)
+QString ZipUnpacker::zipError(zip_error_t* error)
 {
-	char buffer[255];
-	zip_error_to_str(buffer, sizeof(buffer), code, scode);
-	return QString::fromUtf8(buffer);
+	return QString::fromUtf8(zip_error_strerror(error));
+}
+
+QString ZipUnpacker::zipError(int code)
+{
+	zip_error_t error;
+	zip_error_init_with_code(&error, code);
+	QString str = zipError(&error);
+	zip_error_fini(&error);
+	return str;
 }
 
 void ZipUnpacker::processArchive()
@@ -58,23 +65,19 @@ void ZipUnpacker::processArchive()
 		m_zip = zip_open(ba.constData(), 0, &err);
 		
 		if(!m_zip)
-			throw zipError(err, errno);
+			throw zipError(err);
 		
 		m_strArchiveComment = QString::fromUtf8(zip_get_archive_comment(m_zip, 0, 0));
 		
-		int nfiles = zip_get_num_files(m_zip);
+		zip_int64_t nfiles = zip_get_num_entries(m_zip, 0);
 		
-		for(int i=0;i<nfiles;i++)
+		for(zip_int64_t i=0;i<nfiles;i++)
 		{
 			FileEntry file;
 			struct zip_stat zstat;
 			
 			if(zip_stat_index(m_zip, i, 0, &zstat) < 0)
-			{
-				int code, scode;
-				zip_error_get(m_zip, &code, &scode);
-				throw zipError(code, scode);
-			}
+				throw zipError(zip_get_error(m_zip));
 			
 			file.name = QString::fromUtf8(zstat.name);
 			file.size = zstat.size;
@@ -86,7 +89,8 @@ void ZipUnpacker::processArchive()
 	}
 	catch(QString errString)
 	{
-		QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), errString);
+		showError(errString);
+		deleteLater();
 	}
 }
 
@@ -110,11 +114,7 @@ void ZipUnpacker::run()
 			
 			zfile = zip_fopen_index(m_zip, i, 0);
 			if(!zfile)
-			{
-				int code, scode;
-				zip_error_get(m_zip, &code, &scode);
-				throw zipError(code, scode);
-			}
+				throw zipError(zip_get_error(m_zip));
 			
 			try
 			{
@@ -129,11 +129,15 @@ void ZipUnpacker::run()
 				
 				setToolTip(tr("Extracting %1...").arg(m_files[i].name));
 				
-				for(unsigned int pos=0;pos<m_files[i].size;)
+				for(qint64 pos=0;pos<m_files[i].size;)
 				{
-					int read = zip_fread(zfile, buffer, sizeof(buffer));
+					zip_int64_t read = zip_fread(zfile, buffer, sizeof(buffer));
 					if(read < 0)
 						throw tr("Read error");
+					if(read == 0)
+						break;
+					if(m_bAbort)
+						throw QString();
 					file.write(buffer, read);
 					totalDone += read;
 					pos += read;
@@ -162,7 +166,8 @@ void ZipUnpacker::run()
 	}
 	catch(QString errString)
 	{
-		QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), errString);
+		if(!errString.isEmpty())
+			QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, errString));
 	}
 	
 	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));

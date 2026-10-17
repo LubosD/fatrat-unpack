@@ -39,10 +39,10 @@ public:
 	virtual void pipe(int fileIndex, QProcess* process);
 private slots:
 	void askPassword(QByteArray* out);
-	void showError(QString error);
 private:
 	static QString processFileName(QString name);
-	static int rarCallback(unsigned msg, unsigned long tthis, unsigned long p1, unsigned long p2);
+	static int rarCallback(unsigned msg, long tthis, long p1, long p2);
+	static QString rarError(int code);
 	void processArchive();
 	int findFile(QString file);
 private:

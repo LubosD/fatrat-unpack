@@ -22,16 +22,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "PasswordDlg.h"
 
 #include <QMessageBox>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QFile>
 #include <fatrat/fatrat.h>
 #include <QtDebug>
 
 #define _UNIX
-#define LPARAM unsigned long
 #include "unrar/dll.hpp"
 
-static QRegExp g_re("\\.part\\d+");
+static const QRegularExpression g_re("\\.part(\\d+)");
 
 RarUnpacker::RarUnpacker(QString file, QString cmt)
 	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
@@ -48,16 +47,16 @@ RarUnpacker::~RarUnpacker()
 
 bool RarUnpacker::supported(QString file)
 {
-	int x = g_re.indexIn(file);
-	if(x < 0)
+	QRegularExpressionMatch m = g_re.match(file);
+	if(!m.hasMatch())
 		return true;
 	else
-		return g_re.cap(1).toInt() == 1;
+		return m.captured(1).toInt() == 1;
 }
 
 QString RarUnpacker::processFileName(QString file)
 {
-	int x = g_re.indexIn(file);
+	int x = g_re.match(file).capturedStart();
 	if(x != -1)
 	{
 		int i;
@@ -92,7 +91,7 @@ void RarUnpacker::pipe(int fileIndex, QProcess* process)
 
 void RarUnpacker::processArchive()
 {
-	HANDLE handle;
+	HANDLE handle = 0;
 	RAROpenArchiveData oa;
 
 	try
@@ -109,7 +108,7 @@ void RarUnpacker::processArchive()
 		
 		handle = RAROpenArchive(&oa);
 		if(!handle)
-			throw tr("Unable to open the archive.");
+			throw rarError(oa.OpenResult);
 		
 		RARSetCallback(handle, rarCallback, (LPARAM) this);
 		
@@ -123,10 +122,8 @@ void RarUnpacker::processArchive()
 			
 			if(r == ERAR_END_ARCHIVE)
 				break;
-			else if(r == ERAR_BAD_DATA)
-				throw tr("The archive is corrupt.");
 			else if(r != 0)
-				throw tr("Cannot read the archive: %1.").arg(r);
+				throw rarError(r);
 			
 			FileEntry file;
 			file.name = QString::fromWCharArray(hd.FileNameW);
@@ -146,7 +143,8 @@ void RarUnpacker::processArchive()
 	}
 	catch(QString error)
 	{
-		RARCloseArchive(handle);
+		if(handle)
+			RARCloseArchive(handle);
 		
 		if(!error.isEmpty())
 			showError(error);
@@ -164,7 +162,34 @@ void RarUnpacker::askPassword(QByteArray* out)
 		*out = dlg.m_strPassword.toUtf8();
 }
 
-int RarUnpacker::rarCallback(unsigned msg, unsigned long tthis, unsigned long p1, unsigned long p2)
+QString RarUnpacker::rarError(int code)
+{
+	switch(code)
+	{
+	case ERAR_NO_MEMORY:
+		return tr("Not enough memory.");
+	case ERAR_BAD_DATA:
+		return tr("The archive is corrupt.");
+	case ERAR_BAD_ARCHIVE:
+	case ERAR_UNKNOWN_FORMAT:
+		return tr("This is not a supported RAR archive.");
+	case ERAR_EOPEN:
+		return tr("Unable to open the archive.");
+	case ERAR_ECREATE:
+	case ERAR_EWRITE:
+		return tr("Unable to write the extracted data.");
+	case ERAR_MISSING_PASSWORD:
+		return tr("The archive is encrypted and no password was given.");
+	case ERAR_BAD_PASSWORD:
+		return tr("The password is incorrect.");
+	case ERAR_LARGE_DICT:
+		return tr("The archive needs a dictionary too large for this system.");
+	default:
+		return tr("Cannot read the archive: %1.").arg(code);
+	}
+}
+
+int RarUnpacker::rarCallback(unsigned msg, long tthis, long p1, long p2)
 {
 	char* target = (char*) p1;
 	RarUnpacker* This = (RarUnpacker*) tthis;
@@ -185,7 +210,7 @@ int RarUnpacker::rarCallback(unsigned msg, unsigned long tthis, unsigned long p1
 		else
 		{
 			strncpy(target, pass.constData(), p2-1);
-			target[p2] = 0;
+			target[p2-1] = 0;
 			
 		}
 	}
@@ -243,7 +268,7 @@ int RarUnpacker::findFile(QString file)
 
 void RarUnpacker::run()
 {
-	HANDLE handle;
+	HANDLE handle = 0;
 	RAROpenArchiveData oa;
 	RARHeaderDataEx hd;
 
@@ -258,9 +283,11 @@ void RarUnpacker::run()
 		
 		handle = RAROpenArchive(&oa);
 		if(!handle)
-			throw tr("Unable to open the archive.");
+			throw rarError(oa.OpenResult);
 		
-		RARSetPassword(handle, m_strPassword.data());
+		// An empty password would count as a given one and suppress the prompt
+		if(!m_strPassword.isEmpty())
+			RARSetPassword(handle, m_strPassword.data());
 		RARSetCallback(handle, rarCallback, (LPARAM) this);
 		
 		if(m_pipe == 0)
@@ -269,12 +296,18 @@ void RarUnpacker::run()
 			{
 				int e, i;
 				
+				memset(&hd, 0, sizeof(hd));
 				e = RARReadHeaderEx(handle, &hd);
 				if(e == ERAR_END_ARCHIVE)
 					break;
+				else if(e)
+					throw rarError(e);
 				i = findFile(QString::fromWCharArray(hd.FileNameW));
 				if (i == -1)
+				{
+					RARProcessFile(handle, RAR_SKIP, 0, 0);
 					continue;
+				}
 				
 				if(!m_filesValues[i] || !m_files[i].size)
 				{
@@ -303,7 +336,7 @@ void RarUnpacker::run()
 				if(m_bAbort)
 					throw QString();
 				else if(e)
-					throw tr("Cannot read the archive: %1.").arg(e);
+					throw rarError(e);
 			}
 		}
 		else
@@ -312,7 +345,10 @@ void RarUnpacker::run()
 			{
 				int e;
 				
+				memset(&hd, 0, sizeof(hd));
 				e = RARReadHeaderEx(handle, &hd);
+				if(e)
+					throw rarError(e);
 				if(i != m_nFileIndex)
 				{
 					RARProcessFile(handle, RAR_SKIP, 0, 0);
@@ -329,7 +365,7 @@ void RarUnpacker::run()
 				if(m_bAbort)
 					throw QString();
 				else if(e)
-					throw tr("Cannot read the archive: %1.").arg(e);
+					throw rarError(e);
 				break;
 			}
 		}
@@ -339,7 +375,8 @@ void RarUnpacker::run()
 	catch(QString error)
 	{
 		m_file.close();
-		RARCloseArchive(handle);
+		if(handle)
+			RARCloseArchive(handle);
 		
 		if(!error.isEmpty())
 			QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
@@ -347,9 +384,4 @@ void RarUnpacker::run()
 	
 	qDebug() << "Extraction complete";
 	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
-}
-
-void RarUnpacker::showError(QString error)
-{
-	QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), error);
 }

@@ -1,6 +1,8 @@
 === UNRAR ===
 
-This software contains the UnRAR source code.
+This software contains the UnRAR 7.13 source code (unrar/), unmodified,
+from https://www.rarlab.com/rar_add.htm. It may not be used to develop
+a RAR (WinRAR) compatible archiver.
 
 The source code of UnRAR utility is freeware. This means:
 

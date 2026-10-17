@@ -1,28 +1,19 @@
-project(unrar)
-
-cmake_minimum_required(VERSION 2.4.0)
-if(COMMAND cmake_policy)
-	cmake_policy(SET CMP0003 NEW)
-	cmake_policy(SET CMP0005 OLD)
-endif(COMMAND cmake_policy)
-
-ADD_DEFINITIONS(-DLPARAM="unsigned long")
-ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE)
-ADD_DEFINITIONS(-DRARDLL -DSILENT)
-ADD_DEFINITIONS(-fvisibility=hidden)
-ADD_DEFINITIONS(-fPIC)
-
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-	ADD_DEFINITIONS(-ggdb)
-	ADD_DEFINITIONS(-DDEBUG)
-	ADD_DEFINITIONS(-Wall)
-endif(CMAKE_BUILD_TYPE MATCHES Debug)
-
+# UnRAR 7.13 from https://www.rarlab.com/rar_add.htm, built as the static
+# "RARDLL" library (the makefile's "lib" target). Other .cpp files are
+# #included by these and must not be compiled on their own.
 set(unrar_SRCS
-	filestr.cpp scantree.cpp dll.cpp
-	rar.cpp strlist.cpp strfn.cpp pathfn.cpp int64.cpp savepos.cpp global.cpp file.cpp filefn.cpp filcreat.cpp
-	archive.cpp arcread.cpp unicode.cpp system.cpp isnt.cpp crypt.cpp crc.cpp rawread.cpp encname.cpp recvol.cpp
-	resource.cpp match.cpp timefn.cpp rdwrfn.cpp consio.cpp options.cpp ulinks.cpp errhnd.cpp rarvm.cpp rs.cpp
-	rijndael.cpp getbits.cpp sha1.cpp extinfo.cpp extract.cpp volume.cpp list.cpp find.cpp unpack.cpp cmddata.cpp)
+	rar.cpp strlist.cpp strfn.cpp pathfn.cpp smallfn.cpp global.cpp file.cpp filefn.cpp filcreat.cpp
+	archive.cpp arcread.cpp unicode.cpp system.cpp crypt.cpp crc.cpp rawread.cpp encname.cpp
+	resource.cpp match.cpp timefn.cpp rdwrfn.cpp consio.cpp options.cpp errhnd.cpp rarvm.cpp secpassword.cpp
+	rijndael.cpp getbits.cpp sha1.cpp sha256.cpp blake2s.cpp hash.cpp extinfo.cpp extract.cpp volume.cpp
+	list.cpp find.cpp unpack.cpp headers.cpp threadpool.cpp rs16.cpp cmddata.cpp ui.cpp largepage.cpp
+	filestr.cpp scantree.cpp dll.cpp qopen.cpp)
+
+find_package(Threads REQUIRED)
 
 add_library(unrar STATIC ${unrar_SRCS})
+set_target_properties(unrar PROPERTIES POSITION_INDEPENDENT_CODE ON CXX_VISIBILITY_PRESET hidden AUTOMOC OFF AUTOUIC OFF)
+target_compile_definitions(unrar PRIVATE _FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE RAR_SMP RARDLL)
+target_link_libraries(unrar PUBLIC Threads::Threads)
+# Third-party code, don't drown the build in its warnings
+target_compile_options(unrar PRIVATE -w)

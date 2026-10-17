@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef _ZIPUNPACKER_H
 #define _ZIPUNPACKER_H
 #include "Unpacker.h"
-#include "config.h"
+#include "unpack_config.h"
 
 #ifndef WITH_ZIP
 #	error This file is not supported to be included!
@@ -44,7 +44,8 @@ public:
 	virtual void pipe(int fileIndex, QProcess* process);
 private:
 	void processArchive();
-	static QString zipError(int code, int scode);
+	static QString zipError(zip_error_t* error);
+	static QString zipError(int code);
 private:
 	QString m_strTransferComment, m_strArchiveComment;
 	QDir m_dirDestination;

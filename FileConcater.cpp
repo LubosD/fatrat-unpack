@@ -85,7 +85,8 @@ void FileConcater::processArchive()
 	}
 	catch (QString err)
 	{
-		QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), err);
+		showError(err);
+		deleteLater();
 	}
 }
 
@@ -118,9 +119,7 @@ void FileConcater::run()
 				if (rd == -1)
 					throw target.errorString();
 				
-				int pcts;
-				
-				pcts = 100*target.pos()/m_total;
+				int pcts = m_total ? 100*target.pos()/m_total : 100;
 				
 				setProgress(pcts);
 				setFileProgress(0, pcts);
@@ -129,7 +128,7 @@ void FileConcater::run()
 	}
 	catch (QString errString)
 	{
-		QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), errString);
+		QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, errString));
 	}
 	
 	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));

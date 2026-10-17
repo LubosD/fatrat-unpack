@@ -41,15 +41,22 @@ Unpacker::~Unpacker()
 	delete m_widget;
 }
 
+// The setters below are called from the extraction thread, so they hand the
+// work over to the GUI thread.
 void Unpacker::setProgress(int nProgress)
 {
-	QMetaObject::invokeMethod(m_widget->progressBar, "setValue", Q_ARG(int, nProgress));
+	QMetaObject::invokeMethod(m_widget->progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, nProgress));
 }
 
 void Unpacker::setToolTip(QString toolTip)
 {
-	m_widget->progressBar->setToolTip(toolTip);
-	//QMetaObject::invokeMethod(m_widget->progressBar, "setToolTip", Q_ARG(QString, toolTip));
+	QProgressBar* bar = m_widget->progressBar;
+	QMetaObject::invokeMethod(bar, [bar, toolTip]() { bar->setToolTip(toolTip); }, Qt::QueuedConnection);
+}
+
+void Unpacker::showError(QString error)
+{
+	QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), error);
 }
 
 void Unpacker::runDialog(const QList<FileEntry>& files)
@@ -114,6 +121,7 @@ void Unpacker::minimize()
 
 void Unpacker::setFileProgress(int index, int nProgress)
 {
-	m_dialog.setFileProgress(index, nProgress);
+	UnpackDlg* dlg = &m_dialog;
+	QMetaObject::invokeMethod(dlg, [dlg, index, nProgress]() { dlg->setFileProgress(index, nProgress); }, Qt::QueuedConnection);
 }
 
