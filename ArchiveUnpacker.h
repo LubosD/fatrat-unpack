@@ -30,8 +30,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
-#include <QPointer>
-#include <QProcess>
 
 struct archive;
 struct archive_entry;
@@ -60,7 +58,6 @@ private:
 	static QString entryName(struct archive_entry* entry);
 	static bool isSafePath(const QString& name);
 	static const char* passphraseCallback(struct archive* a, void* data);
-	void writeToPipe(const char* data, qint64 length);
 	bool piping() const { return m_nFileIndex != -1; }
 private:
 	QString m_strCommentTransfer;

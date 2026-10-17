@@ -45,6 +45,7 @@ private:
 	static QString rarError(int code);
 	void processArchive();
 	int findFile(QString file);
+	bool piping() const { return m_nFileIndex != -1; }
 private:
 	QByteArray m_strPassword;
 	QDir m_dirDestination;
@@ -57,7 +58,7 @@ private:
 	QString m_strCommentArchive, m_strCommentTransfer;
 	
 	// for piping only
-	QProcess* m_pipe;
+	QPointer<QProcess> m_pipe;
 	int m_nFileIndex;
 };
 

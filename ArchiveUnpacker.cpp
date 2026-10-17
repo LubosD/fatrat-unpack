@@ -26,9 +26,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <archive.h>
 #include <archive_entry.h>
 
-// The command we pipe into may consume data slower than we decompress it
-static const qint64 MAX_PIPE_BUFFER = 4*1024*1024;
-
 ArchiveUnpacker::ArchiveUnpacker(QString file, QString transferComment)
 	: Unpacker(file), m_strCommentTransfer(transferComment), m_nTotal(0), m_nDone(0),
 		m_nPercents(0), m_nFileIndex(-1)
@@ -188,47 +185,9 @@ void ArchiveUnpacker::extract(QList<bool> files, QString where)
 
 void ArchiveUnpacker::pipe(int fileIndex, QProcess* process)
 {
-	if(fileIndex < 0)
-	{
-		process->closeWriteChannel();
-		return;
-	}
-
 	m_pipe = process;
 	m_nFileIndex = fileIndex;
 	start();
-}
-
-// QProcess lives in the GUI thread, so it is only touched from there
-void ArchiveUnpacker::writeToPipe(const char* data, qint64 length)
-{
-	QPointer<QProcess> process = m_pipe;
-	QByteArray chunk(data, length);
-	bool running = false;
-
-	QMetaObject::invokeMethod(this, [process, chunk, &running]() {
-		running = process && process->state() == QProcess::Running;
-		if(running)
-			process->write(chunk);
-	}, Qt::BlockingQueuedConnection);
-
-	if(!running)
-		throw tr("The command has terminated.");
-
-	while(true)
-	{
-		qint64 pending = 0;
-		QMetaObject::invokeMethod(this, [process, &pending]() {
-			if(process)
-				pending = process->bytesToWrite();
-		}, Qt::BlockingQueuedConnection);
-
-		if(pending < MAX_PIPE_BUFFER)
-			break;
-		if(m_bAbort)
-			throw QString();
-		msleep(20);
-	}
 }
 
 void ArchiveUnpacker::extractEntry(struct archive* a, int i)
@@ -265,7 +224,10 @@ void ArchiveUnpacker::extractEntry(struct archive* a, int i)
 				throw QString();
 
 			if(piping())
-				writeToPipe(buffer, rd);
+			{
+				if(!writeToPipe(m_pipe, buffer, rd))
+					throw m_bAbort ? QString() : tr("The command has terminated.");
+			}
 			else if(file.write(buffer, rd) != rd)
 				throw tr("Unable to write the extracted data.");
 
@@ -362,13 +324,7 @@ void ArchiveUnpacker::run()
 		archive_read_free(a);
 
 	if(piping())
-	{
-		QPointer<QProcess> process = m_pipe;
-		QMetaObject::invokeMethod(this, [process]() {
-			if(process)
-				process->closeWriteChannel();
-		}, Qt::QueuedConnection);
-	}
+		closePipe(m_pipe);
 
 	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }

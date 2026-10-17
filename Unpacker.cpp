@@ -26,6 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QProcess>
 #include "PipeDlg.h"
 
+// The command we pipe into may consume data slower than we decompress it
+static const qint64 MAX_PIPE_BUFFER = 4*1024*1024;
+
 Unpacker::Unpacker(QString file)
 	: m_dialog(getMainWindow()), m_bAbort(false), m_strFile(file)
 {
@@ -91,6 +94,10 @@ void Unpacker::abort()
 
 void Unpacker::pipe()
 {
+	QList<bool> files = m_dialog.getStates();
+	if(!files.contains(true))
+		return;
+	
 	PipeDlg dlg(&m_dialog);
 	if(dlg.exec() != QDialog::Accepted)
 		return;
@@ -108,8 +115,6 @@ void Unpacker::pipe()
 	m_dialog.pushUnpack->setEnabled(false);
 	m_dialog.pushAbort->setEnabled(true);
 	
-	QList<bool> files = m_dialog.getStates();
-	
 	connect(prs, SIGNAL(finished(int, QProcess::ExitStatus)), prs, SLOT(deleteLater()));
 	this->pipe(files.indexOf(true), prs);
 }
@@ -125,3 +130,41 @@ void Unpacker::setFileProgress(int index, int nProgress)
 	QMetaObject::invokeMethod(dlg, [dlg, index, nProgress]() { dlg->setFileProgress(index, nProgress); }, Qt::QueuedConnection);
 }
 
+// Returns false when the command has terminated or the extraction was aborted
+bool Unpacker::writeToPipe(QPointer<QProcess> process, const char* data, qint64 length)
+{
+	QByteArray chunk(data, length);
+	bool running = false;
+	
+	QMetaObject::invokeMethod(this, [process, chunk, &running]() {
+		running = process && process->state() == QProcess::Running;
+		if(running)
+			process->write(chunk);
+	}, Qt::BlockingQueuedConnection);
+	
+	if(!running)
+		return false;
+	
+	while(true)
+	{
+		qint64 pending = 0;
+		QMetaObject::invokeMethod(this, [process, &pending]() {
+			if(process)
+				pending = process->bytesToWrite();
+		}, Qt::BlockingQueuedConnection);
+		
+		if(pending < MAX_PIPE_BUFFER)
+			return true;
+		if(m_bAbort)
+			return false;
+		msleep(20);
+	}
+}
+
+void Unpacker::closePipe(QPointer<QProcess> process)
+{
+	QMetaObject::invokeMethod(this, [process]() {
+		if(process)
+			process->closeWriteChannel();
+	}, Qt::QueuedConnection);
+}

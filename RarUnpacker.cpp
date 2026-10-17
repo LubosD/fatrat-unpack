@@ -34,7 +34,7 @@ static const QRegularExpression g_re("\\.part(\\d+)");
 
 RarUnpacker::RarUnpacker(QString file, QString cmt)
 	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
-		   m_strCommentTransfer(cmt), m_pipe(0), m_nFileIndex(-1)
+		   m_strCommentTransfer(cmt), m_nFileIndex(-1)
 {
 	processArchive();
 }
@@ -216,12 +216,16 @@ int RarUnpacker::rarCallback(unsigned msg, long tthis, long p1, long p2)
 	}
 	else if(msg == UCM_PROCESSDATA)
 	{
-		if(!This->m_pipe)
+		if(!This->piping())
 			This->m_file.write(target, p2);
-		else
+		else if(!This->writeToPipe(This->m_pipe, target, p2))
 		{
-			This->m_pipe->write(target, p2);
-			This->m_pipe->waitForBytesWritten(-1);
+			if(!This->m_bAbort)
+			{
+				This->m_bAbort = true;
+				QMetaObject::invokeMethod(This, "showError", Qt::QueuedConnection, Q_ARG(QString, tr("The command has terminated.")));
+			}
+			return -1;
 		}
 		This->m_nDone += p2;
 		
@@ -290,7 +294,7 @@ void RarUnpacker::run()
 			RARSetPassword(handle, m_strPassword.data());
 		RARSetCallback(handle, rarCallback, (LPARAM) this);
 		
-		if(m_pipe == 0)
+		if(!piping())
 		{
 			while (true)
 			{
@@ -381,6 +385,9 @@ void RarUnpacker::run()
 		if(!error.isEmpty())
 			QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
 	}
+	
+	if(piping())
+		closePipe(m_pipe);
 	
 	qDebug() << "Extraction complete";
 	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));

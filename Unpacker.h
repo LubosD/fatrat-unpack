@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <QThread>
 #include <QList>
 #include <QProcess>
+#include <QPointer>
 #include <QRegularExpression>
 #include "UnpackDlg.h"
 
@@ -42,6 +43,11 @@ protected:
 	void runDialog(const QList<FileEntry>& files);
 	virtual void extract(QList<bool> files, QString where) = 0;
 	virtual void pipe(int fileIndex, QProcess* process) = 0;
+	
+	// For the extraction thread: the QProcess lives in the GUI thread and
+	// deletes itself once the command exits
+	bool writeToPipe(QPointer<QProcess> process, const char* data, qint64 length);
+	void closePipe(QPointer<QProcess> process);
 protected slots:
 	// Safe to call from the extraction thread via a queued invokeMethod
 	void showError(QString error);
