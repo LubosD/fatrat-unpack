@@ -2,6 +2,6 @@
 #define UNPACK_CONFIG_H
 
 #cmakedefine WITH_NLS
-#cmakedefine WITH_ZIP
+#cmakedefine WITH_LIBARCHIVE
 
 #endif

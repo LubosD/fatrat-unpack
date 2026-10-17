@@ -30,15 +30,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "unpack_config.h"
 #include "RarUnpacker.h"
 #include "FilesDlg.h"
-#ifdef WITH_ZIP
-#	include "ZipUnpacker.h"
+#ifdef WITH_LIBARCHIVE
+#	include "ArchiveUnpacker.h"
 #endif
 #include "FileConcater.h"
 
 static UnpackerEntry g_archivators[] = {
 		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.rar"), QRegularExpression::CaseInsensitiveOption), RarUnpacker::create, RarUnpacker::supported },
-#ifdef WITH_ZIP
-		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.zip"), QRegularExpression::CaseInsensitiveOption), ZipUnpacker::create, ZipUnpacker::supported },
+#ifdef WITH_LIBARCHIVE
+		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.(7z|zip)"), QRegularExpression::CaseInsensitiveOption), ArchiveUnpacker::create, ArchiveUnpacker::supported },
 #endif
 		{ QRegularExpression(QRegularExpression::anchoredPattern(".+\\.\\d{3,4}")), FileConcater::create, FileConcater::supported },
 };

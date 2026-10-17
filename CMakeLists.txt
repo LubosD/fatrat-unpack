@@ -7,13 +7,20 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 
 option(WITH_NLS "Install translations" OFF)
-option(WITH_ZIP "Support ZIP archives (requires libzip)" OFF)
+option(WITH_LIBARCHIVE "Support 7z and ZIP archives (requires libarchive)" OFF)
+# WITH_ZIP used to enable the libzip based ZIP support
+option(WITH_ZIP "Deprecated alias of WITH_LIBARCHIVE" OFF)
 option(WITH_EVERYTHING "Enable all optional features" OFF)
 
 if(WITH_EVERYTHING)
 	set(WITH_NLS ON)
-	set(WITH_ZIP ON)
+	set(WITH_LIBARCHIVE ON)
 endif(WITH_EVERYTHING)
+
+if(WITH_ZIP)
+	message(WARNING "WITH_ZIP is deprecated, use WITH_LIBARCHIVE")
+	set(WITH_LIBARCHIVE ON)
+endif(WITH_ZIP)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network Xml LinguistTools)
 
@@ -41,10 +48,10 @@ if(NOT FATRAT_PLUGIN_DIR)
 endif(NOT FATRAT_PLUGIN_DIR)
 message(STATUS "Plugin install directory: ${FATRAT_PLUGIN_DIR}")
 
-if(WITH_ZIP)
+if(WITH_LIBARCHIVE)
 	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip>=1.0)
-endif(WITH_ZIP)
+	pkg_check_modules(LIBARCHIVE REQUIRED IMPORTED_TARGET libarchive>=3.2)
+endif(WITH_LIBARCHIVE)
 
 add_subdirectory(unrar)
 
@@ -67,9 +74,9 @@ set(fatrat-unpack_SRCS
 	PipeDlg.ui
 	)
 
-if(WITH_ZIP)
-	list(APPEND fatrat-unpack_SRCS ZipUnpacker.cpp ZipUnpacker.h)
-endif(WITH_ZIP)
+if(WITH_LIBARCHIVE)
+	list(APPEND fatrat-unpack_SRCS ArchiveUnpacker.cpp ArchiveUnpacker.h)
+endif(WITH_LIBARCHIVE)
 
 add_library(fatrat-unpack MODULE ${fatrat-unpack_SRCS})
 # FatRat loads "*.so" from its plugin directory
@@ -78,9 +85,9 @@ target_include_directories(fatrat-unpack PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 	${FATRAT_INCLUDE_DIR} ${FATRAT_INCLUDE_DIR}/fatrat)
 target_link_libraries(fatrat-unpack PRIVATE Qt6::Core Qt6::Widgets Qt6::Network Qt6::Xml unrar)
-if(WITH_ZIP)
-	target_link_libraries(fatrat-unpack PRIVATE PkgConfig::LIBZIP)
-endif(WITH_ZIP)
+if(WITH_LIBARCHIVE)
+	target_link_libraries(fatrat-unpack PRIVATE PkgConfig::LIBARCHIVE)
+endif(WITH_LIBARCHIVE)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	target_compile_definitions(fatrat-unpack PRIVATE DEBUG)

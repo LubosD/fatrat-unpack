@@ -222,7 +222,7 @@
     </message>
 </context>
 <context>
-    <name>ZipUnpacker</name>
+    <name>ArchiveUnpacker</name>
     <message>
         <location filename="../ZipUnpacker.cpp" line="89"/>
         <location filename="../ZipUnpacker.cpp" line="165"/>

@@ -162,7 +162,7 @@
     </message>
 </context>
 <context>
-    <name>ZipUnpacker</name>
+    <name>ArchiveUnpacker</name>
     <message>
         <source>Unpack an archive</source>
         <translation type="unfinished"></translation>
