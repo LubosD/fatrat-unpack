@@ -1,248 +1,301 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0" language="cs">
+<TS version="2.1" language="sk">
 <context>
-    <name>FilesDlg</name>
+    <name>ArchiveUnpacker</name>
     <message>
-        <location filename="../FilesDlg.ui" line="13"/>
-        <location filename="../ui_FilesDlg.h" line="68"/>
-        <source>Unpack an archive</source>
-        <translation>Rozbaliť archív</translation>
+        <location filename="../ArchiveUnpacker.cpp" line="42"/>
+        <source>Cannot read the archive.</source>
+        <translation>Archív sa nedá prečítať.</translation>
     </message>
     <message>
-        <location filename="../FilesDlg.ui" line="19"/>
-        <location filename="../ui_FilesDlg.h" line="69"/>
-        <source>The following supported archives were found:</source>
-        <translation>Boli nájdené nasledujúce podporované archívy:</translation>
+        <location filename="../ArchiveUnpacker.cpp" line="115"/>
+        <source>Encrypted 7z archives are not supported.</source>
+        <translation>Šifrované archívy 7z nie sú podporované.</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="130"/>
+        <source>The archive contains no files.</source>
+        <translation>Archív neobsahuje žiadne súbory.</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="187"/>
+        <source>Unable to open %1 for writing.</source>
+        <translation>Nemôžem otvoriť %1 pre zápis.</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="189"/>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1 (%2 z %3)</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="192"/>
+        <source>Piping %1...</source>
+        <translation>Rúra pre %1...</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="209"/>
+        <source>The command has terminated.</source>
+        <translation>Príkaz skončil.</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="212"/>
+        <source>Unable to write the extracted data.</source>
+        <translation>Nepodarilo sa zapísať rozbalené dáta.</translation>
+    </message>
+    <message>
+        <location filename="../ArchiveUnpacker.cpp" line="274"/>
+        <source>The archive is truncated or has changed.</source>
+        <translation>Archív je skrátený alebo sa zmenil.</translation>
     </message>
 </context>
 <context>
-    <name>PasswordDlg</name>
+    <name>FileConcater</name>
     <message>
-        <location filename="../PasswordDlg.ui" line="14"/>
-        <location filename="../ui_PasswordDlg.h" line="128"/>
-        <source>Password</source>
-        <translation>Heslo</translation>
+        <location filename="../FileConcater.cpp" line="49"/>
+        <source>Unsupported file.</source>
+        <translation>Nepodporovaný súbor.</translation>
     </message>
     <message>
-        <location filename="../PasswordDlg.ui" line="20"/>
-        <location filename="../ui_PasswordDlg.h" line="129"/>
-        <source>The archive is password protected. Please enter the password.</source>
-        <translation>Archív je chránený heslom. Prosím, zadajte heslo.</translation>
+        <location filename="../FileConcater.cpp" line="83"/>
+        <source>Unable to open %1 for writing.</source>
+        <translation>Nemôžem otvoriť %1 pre zápis.</translation>
     </message>
     <message>
-        <location filename="../PasswordDlg.ui" line="38"/>
-        <location filename="../ui_PasswordDlg.h" line="130"/>
-        <source>Transfer&apos;s comment</source>
-        <translation>Komentár prenosu</translation>
+        <location filename="../FileConcater.cpp" line="112"/>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2 %)</translation>
     </message>
     <message>
-        <location filename="../PasswordDlg.ui" line="54"/>
-        <location filename="../ui_PasswordDlg.h" line="131"/>
-        <source>Archive&apos;s comment</source>
-        <translation>Komentár archívu</translation>
-    </message>
-    <message>
-        <location filename="../PasswordDlg.ui" line="73"/>
-        <location filename="../ui_PasswordDlg.h" line="132"/>
-        <source>Fill in</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>PipeDlg</name>
-    <message>
-        <location filename="../PipeDlg.ui" line="14"/>
-        <location filename="../ui_PipeDlg.h" line="95"/>
-        <source>Pipe to a process</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../PipeDlg.ui" line="20"/>
-        <location filename="../ui_PipeDlg.h" line="96"/>
-        <source>Predefined commands</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../PipeDlg.ui" line="37"/>
-        <location filename="../ui_PipeDlg.h" line="97"/>
-        <source>Command</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>ProgressWidget</name>
-    <message>
-        <source>Form</source>
-        <translation type="obsolete">Formulár</translation>
-    </message>
-    <message>
-        <location filename="../ProgressWidget.ui" line="62"/>
-        <location filename="../ui_ProgressWidget.h" line="65"/>
-        <source>Restore</source>
-        <translation>Obnoviť</translation>
-    </message>
-    <message>
-        <location filename="../ProgressWidget.ui" line="65"/>
-        <location filename="../ui_ProgressWidget.h" line="68"/>
-        <source>+</source>
-        <translation>+</translation>
+        <location filename="../FileConcater.cpp" line="121"/>
+        <source>Piping is not supported for split files.</source>
+        <translation>Rozdelené súbory nie je možné presmerovať do príkazu.</translation>
     </message>
 </context>
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../fr_unpack.cpp" line="69"/>
+        <location filename="../fr_unpack.cpp" line="91"/>
+        <source>Unpack %1</source>
+        <translation>Rozbaliť %1</translation>
+    </message>
+    <message>
+        <location filename="../fr_unpack.cpp" line="146"/>
         <source>Unpack archive(s)...</source>
         <translation>Rozbaliť archív(y)...</translation>
     </message>
     <message>
-        <location filename="../fr_unpack.cpp" line="79"/>
+        <location filename="../fr_unpack.cpp" line="112"/>
         <source>Unpack plugin</source>
         <translation>Unpack plugin</translation>
-    </message>
-    <message>
-        <location filename="../fr_unpack.cpp" line="109"/>
-        <location filename="../fr_unpack.cpp" line="120"/>
-        <location filename="../Unpacker.cpp" line="68"/>
-        <source>Unpack an archive</source>
-        <translation>Rozbaliť archív</translation>
-    </message>
-    <message>
-        <location filename="../fr_unpack.cpp" line="109"/>
-        <source>This file is not a supported archive!</source>
-        <translation>Tento súbor nie je podporovaným archívom!</translation>
-    </message>
-    <message>
-        <location filename="../fr_unpack.cpp" line="120"/>
-        <source>No supported archives found.</source>
-        <translation>Nenájdené žiadne podporované archívy.</translation>
     </message>
 </context>
 <context>
     <name>RarUnpacker</name>
     <message>
-        <location filename="../RarUnpacker.cpp" line="112"/>
-        <location filename="../RarUnpacker.cpp" line="251"/>
+        <location filename="../RarUnpacker.cpp" line="70"/>
         <source>Unable to open the archive.</source>
         <translation>Nemôžem otvoriť archív.</translation>
     </message>
     <message>
-        <location filename="../RarUnpacker.cpp" line="127"/>
+        <location filename="../RarUnpacker.cpp" line="65"/>
         <source>The archive is corrupt.</source>
         <translation>Archív je poškodený.</translation>
     </message>
     <message>
-        <location filename="../RarUnpacker.cpp" line="129"/>
-        <location filename="../RarUnpacker.cpp" line="290"/>
-        <location filename="../RarUnpacker.cpp" line="316"/>
+        <location filename="../RarUnpacker.cpp" line="63"/>
+        <source>Not enough memory.</source>
+        <translation>Nedostatok pamäte.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="68"/>
+        <source>This is not a supported RAR archive.</source>
+        <translation>Toto nie je podporovaný archív RAR.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="73"/>
+        <source>Unable to write the extracted data.</source>
+        <translation>Nepodarilo sa zapísať rozbalené dáta.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="75"/>
+        <source>The archive is encrypted and no password was given.</source>
+        <translation>Archív je šifrovaný a nebolo zadané heslo.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="77"/>
+        <source>The password is incorrect.</source>
+        <translation>Heslo je nesprávne.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="79"/>
+        <source>The archive needs a dictionary too large for this system.</source>
+        <translation>Archív potrebuje slovník príliš veľký pre tento systém.</translation>
+    </message>
+    <message>
+        <location filename="../RarUnpacker.cpp" line="81"/>
         <source>Cannot read the archive: %1.</source>
         <translation>Nemôžem načítať archív: %1.</translation>
     </message>
     <message>
-        <location filename="../RarUnpacker.cpp" line="221"/>
-        <source>Volume %1 not found</source>
-        <translation>Zväzok %1 nenájdený</translation>
+        <location filename="../RarUnpacker.cpp" line="323"/>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1 (%2 z %3)</translation>
     </message>
     <message>
-        <location filename="../RarUnpacker.cpp" line="277"/>
+        <location filename="../RarUnpacker.cpp" line="321"/>
         <source>Unable to open %1 for writing.</source>
         <translation>Nemôžem otvoriť %1 pre zápis.</translation>
     </message>
     <message>
-        <location filename="../RarUnpacker.cpp" line="279"/>
-        <source>Extracting %1...</source>
-        <translation>Rozbaľujem %1...</translation>
-    </message>
-    <message>
-        <location filename="../RarUnpacker.cpp" line="306"/>
+        <location filename="../RarUnpacker.cpp" line="360"/>
         <source>Piping %1...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../RarUnpacker.cpp" line="338"/>
-        <source>Unpack an archive</source>
-        <translation>Rozbaľujem archiv</translation>
+        <translation>Rúra pre %1...</translation>
     </message>
 </context>
 <context>
-    <name>UnpackDlg</name>
+    <name>UnpackTask</name>
     <message>
-        <location filename="../ui_UnpackDlg.h" line="81"/>
-        <location filename="../UnpackDlg.ui" line="14"/>
-        <source>Unpack an archive</source>
-        <translation>Rozbaliť archív</translation>
+        <location filename="../UnpackTask.cpp" line="134"/>
+        <source>Choose an archive</source>
+        <translation>Vyberte archív</translation>
     </message>
     <message>
-        <location filename="../ui_UnpackDlg.h" line="82"/>
-        <location filename="../UnpackDlg.ui" line="27"/>
-        <source>Unpack</source>
-        <translation>Rozbaliť</translation>
+        <location filename="../UnpackTask.cpp" line="136"/>
+        <location filename="../UnpackTask.cpp" line="137"/>
+        <source>Archive</source>
+        <translation>Archív</translation>
     </message>
     <message>
-        <location filename="../ui_UnpackDlg.h" line="83"/>
-        <location filename="../UnpackDlg.ui" line="34"/>
-        <source>Cancel</source>
-        <translation>Zrušiť</translation>
-    </message>
-    <message>
-        <location filename="../ui_UnpackDlg.h" line="84"/>
-        <location filename="../UnpackDlg.ui" line="41"/>
-        <source>Hide</source>
-        <translation>Skryť</translation>
-    </message>
-    <message>
-        <location filename="../ui_UnpackDlg.h" line="85"/>
-        <location filename="../UnpackDlg.ui" line="61"/>
-        <source>Pipe</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../UnpackDlg.cpp" line="30"/>
-        <source>Name</source>
-        <translation>Názov</translation>
-    </message>
-    <message>
-        <location filename="../UnpackDlg.cpp" line="31"/>
+        <location filename="../UnpackTask.cpp" line="137"/>
+        <location filename="../UnpackTask.cpp" line="177"/>
         <source>Size</source>
         <translation>Veľkosť</translation>
     </message>
     <message>
-        <location filename="../UnpackDlg.cpp" line="32"/>
-        <source>Progress</source>
-        <translation>Priebeh</translation>
+        <location filename="../UnpackTask.cpp" line="176"/>
+        <source>Files</source>
+        <translation>Súbory</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="177"/>
+        <source>Name</source>
+        <translation>Názov</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="180"/>
+        <source>Destination</source>
+        <translation>Cieľ</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="186"/>
+        <source>Action</source>
+        <translation>Akcia</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="189"/>
+        <source>Extract to the destination</source>
+        <translation>Rozbaliť do cieľa</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="190"/>
+        <source>Pipe one file into a command</source>
+        <translation>Presmerovať jeden súbor do príkazu</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="195"/>
+        <source>Custom</source>
+        <translation>Vlastný</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="200"/>
+        <source>Command</source>
+        <translation>Príkaz</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="204"/>
+        <source>Custom command</source>
+        <translation>Vlastný príkaz</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="208"/>
+        <source>Choose files</source>
+        <translation>Vyberte súbory</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="230"/>
+        <source>Pick exactly one file to pipe.</source>
+        <translation>Vyberte presne jeden súbor na presmerovanie.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="235"/>
+        <source>Enter a command.</source>
+        <translation>Zadajte príkaz.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="258"/>
+        <source>The downloaded data is gone.</source>
+        <translation>Stiahnuté dáta zmizli.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="262"/>
+        <source>No supported archives found.</source>
+        <translation>Nenájdené žiadne podporované archívy.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="273"/>
+        <location filename="../UnpackTask.cpp" line="337"/>
+        <source>No answer</source>
+        <translation>Žiadna odpoveď</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="298"/>
+        <source>Failed to execute the command.</source>
+        <translation>Nepodarilo sa spustiť príkaz.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="316"/>
+        <source>The command exited with status %1.</source>
+        <translation>Príkaz skončil s návratovým kódom %1.</translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="317"/>
+        <source>Piped %1 into the command.</source>
+        <translation>Súbor %1 bol presmerovaný do príkazu.</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../UnpackTask.cpp" line="332"/>
+        <source>Unpacked %n file(s) to %1.</source>
+        <translation>
+            <numerusform>Rozbalený %n súbor do %1.</numerusform>
+            <numerusform>Rozbalené %n súbory do %1.</numerusform>
+            <numerusform>Rozbalených %n súborov do %1.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../UnpackTask.cpp" line="337"/>
+        <location filename="../UnpackTask.cpp" line="342"/>
+        <location filename="../UnpackTask.cpp" line="343"/>
+        <source>Cancelled</source>
+        <translation>Zrušené</translation>
     </message>
 </context>
 <context>
     <name>Unpacker</name>
     <message>
-        <location filename="../Unpacker.cpp" line="96"/>
-        <source>Failed to execute the command.</source>
-        <translation type="unfinished"></translation>
-    </message>
-</context>
-<context>
-    <name>ArchiveUnpacker</name>
-    <message>
-        <location filename="../ZipUnpacker.cpp" line="89"/>
-        <location filename="../ZipUnpacker.cpp" line="165"/>
-        <source>Unpack an archive</source>
-        <translation type="unfinished"></translation>
+        <location filename="../Unpacker.cpp" line="37"/>
+        <source>Password</source>
+        <translation>Heslo</translation>
     </message>
     <message>
-        <location filename="../ZipUnpacker.cpp" line="128"/>
-        <source>Unable to open %1 for writing.</source>
-        <translation type="unfinished">Nemôžem otvoriť %1 pre zápis.</translation>
+        <location filename="../Unpacker.cpp" line="42"/>
+        <source>Password needed</source>
+        <translation>Je potrebné heslo</translation>
     </message>
     <message>
-        <location filename="../ZipUnpacker.cpp" line="130"/>
-        <source>Extracting %1...</source>
-        <translation type="unfinished">Rozbaľujem %1...</translation>
-    </message>
-    <message>
-        <location filename="../ZipUnpacker.cpp" line="136"/>
-        <source>Read error</source>
-        <translation type="unfinished"></translation>
+        <location filename="../Unpacker.cpp" line="44"/>
+        <source>The password is incorrect.</source>
+        <translation>Heslo je nesprávne.</translation>
     </message>
 </context>
 </TS>
