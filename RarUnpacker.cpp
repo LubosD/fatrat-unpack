@@ -2,7 +2,7 @@
 FatRat download manager
 http://fatrat.dolezel.info
 
-Copyright (C) 2006-2008 Lubos Dolezel <lubos a dolezel.info>
+Copyright (C) 2006-2026 Lubos Dolezel <lubos a dolezel.info>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -19,36 +19,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "RarUnpacker.h"
-#include "PasswordDlg.h"
 
-#include <QMessageBox>
 #include <QRegularExpression>
-#include <QFile>
-#include <fatrat/fatrat.h>
-#include <QtDebug>
+#include <cstring>
 
 #define _UNIX
 #include "unrar/dll.hpp"
 
 static const QRegularExpression g_re("\\.part(\\d+)");
 
-RarUnpacker::RarUnpacker(QString file, QString cmt)
-	: Unpacker(processFileName(file)), m_nTotal(0), m_nDone(0), m_nPercents(0),
-		   m_strCommentTransfer(cmt), m_nFileIndex(-1)
+RarUnpacker::RarUnpacker(const QString& file, UnpackUi& ui)
+	: Unpacker(processFileName(file), ui)
 {
-	processArchive();
 }
 
-RarUnpacker::~RarUnpacker()
-{
-	//if(m_pipe)
-	//	m_pipe->deleteLater();
-}
-
-bool RarUnpacker::supported(QString file)
+bool RarUnpacker::supported(const QString& file)
 {
 	QRegularExpressionMatch m = g_re.match(file);
-	if(!m.hasMatch())
+	if (!m.hasMatch())
 		return true;
 	else
 		return m.captured(1).toInt() == 1;
@@ -57,114 +45,19 @@ bool RarUnpacker::supported(QString file)
 QString RarUnpacker::processFileName(QString file)
 {
 	int x = g_re.match(file).capturedStart();
-	if(x != -1)
+	if (x != -1)
 	{
 		int i;
-		for(i=x+5;file[i].isDigit();i++)
+		for (i = x + 5; file[i].isDigit(); i++)
 			file[i] = '0';
-		file[i-1] = '1';
+		file[i - 1] = '1';
 	}
 	return file;
 }
 
-void RarUnpacker::extract(QList<bool> files, QString where)
-{
-	m_dirDestination = where;
-	m_filesValues = files;
-	for(int i=0;i<m_files.size();i++)
-	{
-		if(m_filesValues[i])
-			m_nTotal += m_files[i].size;
-	}
-	
-	start();
-}
-
-void RarUnpacker::pipe(int fileIndex, QProcess* process)
-{
-	m_pipe = process;
-	m_nFileIndex = fileIndex;
-	m_nTotal = m_files[fileIndex].size;
-	
-	start();
-}
-
-void RarUnpacker::processArchive()
-{
-	HANDLE handle = 0;
-	RAROpenArchiveData oa;
-
-	try
-	{
-		memset(&oa, 0, sizeof(oa));
-		
-		QByteArray ba = m_strFile.toUtf8();
-		char comment[4*1024] = "";
-		
-		oa.ArcName = (char*) ba.constData();
-		oa.OpenMode = RAR_OM_LIST;
-		oa.CmtBuf = comment;
-		oa.CmtBufSize = sizeof(comment);
-		
-		handle = RAROpenArchive(&oa);
-		if(!handle)
-			throw rarError(oa.OpenResult);
-		
-		RARSetCallback(handle, rarCallback, (LPARAM) this);
-		
-		while(true)
-		{
-			int r;
-                        RARHeaderDataEx hd;
-			memset(&hd, 0, sizeof(hd));
-			
-			r = RARReadHeaderEx(handle, &hd);
-			
-			if(r == ERAR_END_ARCHIVE)
-				break;
-			else if(r != 0)
-				throw rarError(r);
-			
-			FileEntry file;
-			file.name = QString::fromWCharArray(hd.FileNameW);
-			file.size = hd.UnpSize;
-			file.size += qint64(hd.UnpSizeHigh) << 32;
-			
-			m_files << file;
-			
-			RARProcessFile(handle, RAR_SKIP, 0, 0);
-		}
-		
-		if(oa.CmtState == 1 || oa.CmtState == ERAR_SMALL_BUF)
-			m_strCommentArchive = QString::fromUtf8(comment, oa.CmtSize);
-		
-		RARCloseArchive(handle);
-		runDialog(m_files);
-	}
-	catch(QString error)
-	{
-		if(handle)
-			RARCloseArchive(handle);
-		
-		if(!error.isEmpty())
-			showError(error);
-		deleteLater();
-	}
-}
-
-void RarUnpacker::askPassword(QByteArray* out)
-{
-	PasswordDlg dlg;
-	dlg.m_strCommentArchive = m_strCommentArchive;
-	dlg.m_strCommentTransfer = m_strCommentTransfer;
-	
-	if(dlg.exec() == QDialog::Accepted)
-		*out = dlg.m_strPassword.toUtf8();
-}
-
 QString RarUnpacker::rarError(int code)
 {
-	switch(code)
+	switch (code)
 	{
 	case ERAR_NO_MEMORY:
 		return tr("Not enough memory.");
@@ -189,78 +82,70 @@ QString RarUnpacker::rarError(int code)
 	}
 }
 
+// Called by the unrar dll. May not throw: it runs on top of the dll's own
+// call stack, which doesn't expect C++ exceptions crossing it. Anything it
+// can't handle on the spot (no password given) is recorded on This and
+// re-raised once control is back in ordinary code.
 int RarUnpacker::rarCallback(unsigned msg, long tthis, long p1, long p2)
 {
 	char* target = (char*) p1;
 	RarUnpacker* This = (RarUnpacker*) tthis;
-	
-	if(This->m_bAbort)
+
+	if (This->cancelled())
 		return -1;
-	
-	if(msg == UCM_NEEDPASSWORD)
+
+	if (msg == UCM_NEEDPASSWORD)
 	{
 		QByteArray pass;
-		
-		QMetaObject::invokeMethod(This, "askPassword", (This->m_filesValues.isEmpty()) ? Qt::DirectConnection : Qt::BlockingQueuedConnection,
-					  Q_ARG(QByteArray*, &pass));
+		try
+		{
+			pass = This->askPassword(This->m_strCommentArchive, !This->m_strPassword.isEmpty());
+		}
+		catch (const NoAnswer&)
+		{
+			This->m_bNoAnswer = true;
+			return -1;
+		}
+
 		This->m_strPassword = pass;
-		
-		if(pass.isEmpty())
+		if (pass.isEmpty())
 			return -1;
-		else
-		{
-			strncpy(target, pass.constData(), p2-1);
-			target[p2-1] = 0;
-			
-		}
+
+		strncpy(target, pass.constData(), p2 - 1);
+		target[p2 - 1] = 0;
 	}
-	else if(msg == UCM_PROCESSDATA)
+	else if (msg == UCM_PROCESSDATA)
 	{
-		if(!This->piping())
-			This->m_file.write(target, p2);
-		else if(!This->writeToPipe(This->m_pipe, target, p2))
+		bool ok;
+		if (!This->piping())
 		{
-			if(!This->m_bAbort)
-			{
-				This->m_bAbort = true;
-				QMetaObject::invokeMethod(This, "showError", Qt::QueuedConnection, Q_ARG(QString, tr("The command has terminated.")));
-			}
+			ok = This->m_file.write(target, p2) == p2;
+		}
+		else
+			ok = This->writeToPipe(This->m_pipeDevice, target, p2);
+
+		if (!ok)
 			return -1;
-		}
+
 		This->m_nDone += p2;
-		
-		if(This->m_nTotal)
+		if (This->m_nTotal)
 		{
-			int pcts = 100*This->m_nDone/This->m_nTotal;
-			if(pcts > This->m_nPercents)
+			int pcts = 100 * This->m_nDone / This->m_nTotal;
+			if (pcts > This->m_nPercents)
 				This->setProgress(This->m_nPercents = pcts);
-		}
-		if(This->m_nTotalFile)
-		{
-			int pcts = 100*This->m_file.pos()/This->m_nTotalFile;
-			if(pcts > This->m_nPercentsFile)
-				This->setFileProgress(This->m_nCurrentFile, This->m_nPercentsFile = pcts);
 		}
 		return 1;
 	}
-	else if(msg == UCM_CHANGEVOLUME)
+	else if (msg == UCM_CHANGEVOLUME)
 	{
-		if(p2 == RAR_VOL_ASK)
-		{
-			QString error = tr("Volume %1 not found").arg(target);
-			QMetaObject::invokeMethod(This, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
-			return -1;
-		}
-		else if(p2 == RAR_VOL_NOTIFY)
-		{
-			qDebug() << "UCM_CHANGEVOLUME notify: " << target;
-		}
+		if (p2 == RAR_VOL_ASK)
+			return -1; // The volume is missing; fail with ERAR_EOPEN or similar.
 	}
-	
+
 	return 0;
 }
 
-int RarUnpacker::findFile(QString file)
+int RarUnpacker::findFile(const QString& file) const
 {
 	for (int i = 0; i < m_files.size(); i++)
 	{
@@ -270,125 +155,242 @@ int RarUnpacker::findFile(QString file)
 	return -1;
 }
 
-void RarUnpacker::run()
+QList<FileEntry> RarUnpacker::list()
 {
-	HANDLE handle = 0;
-	RAROpenArchiveData oa;
-	RARHeaderDataEx hd;
-
-	try
+	while (true)
 	{
-		qDebug() << "Extraction of " << m_strFile;
-		
+		RAROpenArchiveData oa;
+		memset(&oa, 0, sizeof(oa));
+
+		QByteArray ba = m_strFile.toUtf8();
+		char comment[4 * 1024] = "";
+
+		oa.ArcName = (char*) ba.constData();
+		oa.OpenMode = RAR_OM_LIST;
+		oa.CmtBuf = comment;
+		oa.CmtBufSize = sizeof(comment);
+
+		HANDLE handle = RAROpenArchive(&oa);
+		if (!handle)
+			throw rarError(oa.OpenResult);
+
+		RARSetCallback(handle, rarCallback, (LPARAM) this);
+		if (!m_strPassword.isEmpty())
+			RARSetPassword(handle, m_strPassword.data());
+
+		m_bNoAnswer = false;
+		QList<FileEntry> files;
+		int err = ERAR_SUCCESS;
+
+		while (true)
+		{
+			RARHeaderDataEx hd;
+			memset(&hd, 0, sizeof(hd));
+
+			int r = RARReadHeaderEx(handle, &hd);
+			if (r == ERAR_END_ARCHIVE)
+				break;
+			if (r == ERAR_BAD_PASSWORD || r == ERAR_MISSING_PASSWORD)
+			{
+				err = r;
+				break;
+			}
+			if (r != 0)
+			{
+				RARCloseArchive(handle);
+				if (m_bNoAnswer)
+					throw NoAnswer{};
+				throw rarError(r);
+			}
+
+			FileEntry file;
+			file.name = QString::fromWCharArray(hd.FileNameW);
+			file.size = hd.UnpSize + (qint64(hd.UnpSizeHigh) << 32);
+			files << file;
+
+			RARProcessFile(handle, RAR_SKIP, 0, 0);
+		}
+
+		if (err == ERAR_SUCCESS && (oa.CmtState == 1 || oa.CmtState == ERAR_SMALL_BUF))
+			m_strCommentArchive = QString::fromUtf8(comment, oa.CmtSize);
+
+		RARCloseArchive(handle);
+
+		if (m_bNoAnswer)
+			throw NoAnswer{};
+
+		if (err == ERAR_SUCCESS)
+		{
+			m_files = files;
+			return files;
+		}
+
+		// Reaching this line at all means a password was already tried (via
+		// the callback above, or a previous spin of this loop) and was wrong.
+		m_strPassword = askPassword(m_strCommentArchive, true);
+	}
+}
+
+void RarUnpacker::extract(const QList<bool>& files, const QString& where)
+{
+	m_dirDestination = QDir(where);
+	m_filesValues = files;
+	m_nFileIndex = -1;
+
+	m_nTotal = 0;
+	m_nSelectedTotal = 0;
+	for (int i = 0; i < m_files.size(); i++)
+	{
+		if (m_filesValues[i])
+		{
+			m_nTotal += m_files[i].size;
+			m_nSelectedTotal++;
+		}
+	}
+	m_nDone = 0;
+	m_nPercents = -1;
+	m_nSelectedDone = 0;
+
+	runExtraction();
+}
+
+void RarUnpacker::pipe(int fileIndex, QIODevice* device)
+{
+	m_pipeDevice = device;
+	m_nFileIndex = fileIndex;
+	m_nTotal = m_files[fileIndex].size;
+	m_nDone = 0;
+	m_nPercents = -1;
+
+	runExtraction();
+}
+
+void RarUnpacker::runExtraction()
+{
+	while (true)
+	{
+		RAROpenArchiveData oa;
 		memset(&oa, 0, sizeof(oa));
 		QByteArray ba = m_strFile.toUtf8();
 		oa.ArcName = (char*) ba.constData();
 		oa.OpenMode = RAR_OM_EXTRACT;
-		
-		handle = RAROpenArchive(&oa);
-		if(!handle)
+
+		HANDLE handle = RAROpenArchive(&oa);
+		if (!handle)
 			throw rarError(oa.OpenResult);
-		
-		// An empty password would count as a given one and suppress the prompt
-		if(!m_strPassword.isEmpty())
+
+		// An empty password would count as a given one and suppress the prompt.
+		if (!m_strPassword.isEmpty())
 			RARSetPassword(handle, m_strPassword.data());
 		RARSetCallback(handle, rarCallback, (LPARAM) this);
-		
-		if(!piping())
+		m_bNoAnswer = false;
+
+		int e = ERAR_SUCCESS;
+		try
 		{
-			while (true)
+			if (!piping())
 			{
-				int e, i;
-				
-				memset(&hd, 0, sizeof(hd));
-				e = RARReadHeaderEx(handle, &hd);
-				if(e == ERAR_END_ARCHIVE)
+				while (true)
+				{
+					RARHeaderDataEx hd;
+					memset(&hd, 0, sizeof(hd));
+					e = RARReadHeaderEx(handle, &hd);
+					if (e == ERAR_END_ARCHIVE)
+					{
+						e = ERAR_SUCCESS;
+						break;
+					}
+					else if (e)
+						break;
+
+					int i = findFile(QString::fromWCharArray(hd.FileNameW));
+					if (i == -1 || !m_filesValues[i] || !m_files[i].size)
+					{
+						RARProcessFile(handle, RAR_SKIP, 0, 0);
+						continue;
+					}
+
+					QString fpath = m_dirDestination.filePath(m_files[i].name);
+					m_file.setFileName(fpath);
+
+					int l = m_files[i].name.lastIndexOf('/');
+					if (l != -1)
+						m_dirDestination.mkpath(m_files[i].name.left(l));
+
+					if (!m_file.open(QIODevice::WriteOnly))
+						throw tr("Unable to open %1 for writing.").arg(fpath);
+
+					setStatus(tr("%1 (%2 of %3)").arg(m_files[i].name).arg(++m_nSelectedDone).arg(m_nSelectedTotal));
+
+					e = RARProcessFile(handle, RAR_TEST, 0, 0);
+					m_file.close();
+
+					if (cancelled())
+					{
+						QFile::remove(fpath);
+						throw QString();
+					}
+					if (e == ERAR_BAD_PASSWORD || e == ERAR_MISSING_PASSWORD)
+					{
+						QFile::remove(fpath);
+						break;
+					}
+					if (e)
+					{
+						QFile::remove(fpath);
+						throw rarError(e);
+					}
+				}
+			}
+			else
+			{
+				for (int i = 0; i < m_files.size(); i++)
+				{
+					RARHeaderDataEx hd;
+					memset(&hd, 0, sizeof(hd));
+					e = RARReadHeaderEx(handle, &hd);
+					if (e)
+						break;
+					if (i != m_nFileIndex)
+					{
+						RARProcessFile(handle, RAR_SKIP, 0, 0);
+						continue;
+					}
+
+					setStatus(tr("Piping %1...").arg(m_files[i].name));
+					e = RARProcessFile(handle, RAR_TEST, 0, 0);
+
+					if (cancelled())
+						throw QString();
+					if (e && e != ERAR_BAD_PASSWORD && e != ERAR_MISSING_PASSWORD)
+						throw rarError(e);
 					break;
-				else if(e)
-					throw rarError(e);
-				i = findFile(QString::fromWCharArray(hd.FileNameW));
-				if (i == -1)
-				{
-					RARProcessFile(handle, RAR_SKIP, 0, 0);
-					continue;
 				}
-				
-				if(!m_filesValues[i] || !m_files[i].size)
-				{
-					RARProcessFile(handle, RAR_SKIP, 0, 0);
-					continue;
-				}
-				
-				QString fpath = m_dirDestination.filePath(m_files[i].name);
-				m_file.setFileName(fpath);
-				
-				int l = m_files[i].name.lastIndexOf('/');
-				if(l != -1)
-					m_dirDestination.mkpath(m_files[i].name.left(l));
-				
-				if(!m_file.open(QIODevice::WriteOnly))
-					throw tr("Unable to open %1 for writing.").arg(fpath);
-				
-				setToolTip(tr("Extracting %1...").arg(m_files[i].name));
-				m_nPercentsFile = -1;
-				m_nTotalFile = m_files[i].size;
-				m_nCurrentFile = i;
-				
-				e = RARProcessFile(handle, RAR_TEST, 0, 0);
-				m_file.close();
-				
-				if(m_bAbort)
-					throw QString();
-				else if(e)
-					throw rarError(e);
 			}
 		}
-		else
+		catch (...)
 		{
-			for(int i=0;i<m_files.size();i++)
-			{
-				int e;
-				
-				memset(&hd, 0, sizeof(hd));
-				e = RARReadHeaderEx(handle, &hd);
-				if(e)
-					throw rarError(e);
-				if(i != m_nFileIndex)
-				{
-					RARProcessFile(handle, RAR_SKIP, 0, 0);
-					continue;
-				}
-				
-				setToolTip(tr("Piping %1...").arg(m_files[i].name));
-				m_nPercentsFile = -1;
-				m_nTotalFile = m_files[i].size;
-				m_nCurrentFile = i;
-				
-				e = RARProcessFile(handle, RAR_TEST, 0, 0);
-				
-				if(m_bAbort)
-					throw QString();
-				else if(e)
-					throw rarError(e);
-				break;
-			}
-		}
-		
-		RARCloseArchive(handle);
-	}
-	catch(QString error)
-	{
-		m_file.close();
-		if(handle)
 			RARCloseArchive(handle);
-		
-		if(!error.isEmpty())
-			QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
+			throw;
+		}
+
+		RARCloseArchive(handle);
+
+		if (m_bNoAnswer)
+			throw NoAnswer{};
+
+		if (e == ERAR_SUCCESS)
+			return;
+		if (e != ERAR_BAD_PASSWORD && e != ERAR_MISSING_PASSWORD)
+			throw rarError(e);
+
+		// Reaching this line at all means a password was already tried and was wrong.
+		m_strPassword = askPassword(m_strCommentArchive, true);
+		if (!piping())
+		{
+			m_nDone = 0;
+			m_nPercents = -1;
+			m_nSelectedDone = 0;
+		}
 	}
-	
-	if(piping())
-		closePipe(m_pipe);
-	
-	qDebug() << "Extraction complete";
-	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
 }

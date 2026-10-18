@@ -2,7 +2,7 @@
 FatRat download manager
 http://fatrat.dolezel.info
 
-Copyright (C) 2006-2008 Lubos Dolezel <lubos a dolezel.info>
+Copyright (C) 2006-2026 Lubos Dolezel <lubos a dolezel.info>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -19,152 +19,53 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "Unpacker.h"
-#include "ProgressWidget.h"
-#include <fatrat/fatrat.h>
-#include <QMessageBox>
-#include <QFileDialog>
-#include <QProcess>
-#include "PipeDlg.h"
+#include <QJsonArray>
+#include <QJsonObject>
 
-// The command we pipe into may consume data slower than we decompress it
-static const qint64 MAX_PIPE_BUFFER = 4*1024*1024;
+// The command we pipe into may consume data slower than we decompress it.
+static const qint64 MAX_PIPE_BUFFER = 4 * 1024 * 1024;
 
-Unpacker::Unpacker(QString file)
-	: m_dialog(getMainWindow()), m_bAbort(false), m_strFile(file)
+QByteArray Unpacker::askPassword(const QString& archiveComment, bool wrongBefore)
 {
-	m_widget = new ProgressWidget;
-	addStatusWidget(m_widget, false);
-	m_widget->show();
-	connect(m_widget->toolRestore, SIGNAL(clicked()), &m_dialog, SLOT(show()));
+	QJsonArray fields;
+
+	if (!m_strTransferComment.isEmpty())
+		fields.append(QJsonObject{ { "type", "label" }, { "title", m_strTransferComment } });
+	if (!archiveComment.isEmpty())
+		fields.append(QJsonObject{ { "type", "label" }, { "title", archiveComment } });
+
+	QJsonObject password{ { "type", "password" }, { "key", "password" }, { "title", tr("Password") } };
+	if (!m_strTransferComment.isEmpty() && !m_strTransferComment.contains('\n'))
+		password.insert("default", m_strTransferComment);
+	fields.append(password);
+
+	QJsonObject form{ { "title", tr("Password needed") }, { "fields", fields } };
+	if (wrongBefore)
+		form.insert("description", tr("The password is incorrect."));
+
+	std::optional<QJsonObject> answer = m_ui.ask(form, 600000);
+	if (!answer)
+		throw NoAnswer{};
+	return answer->value("password").toString().toUtf8();
 }
 
-Unpacker::~Unpacker()
+bool Unpacker::writeToPipe(QIODevice* device, const char* data, qint64 length)
 {
-	removeStatusWidget(m_widget);
-	delete m_widget;
-}
+	qint64 written = 0;
 
-// The setters below are called from the extraction thread, so they hand the
-// work over to the GUI thread.
-void Unpacker::setProgress(int nProgress)
-{
-	QMetaObject::invokeMethod(m_widget->progressBar, "setValue", Qt::QueuedConnection, Q_ARG(int, nProgress));
-}
-
-void Unpacker::setToolTip(QString toolTip)
-{
-	QProgressBar* bar = m_widget->progressBar;
-	QMetaObject::invokeMethod(bar, [bar, toolTip]() { bar->setToolTip(toolTip); }, Qt::QueuedConnection);
-}
-
-void Unpacker::showError(QString error)
-{
-	QMessageBox::critical(getMainWindow(), tr("Unpack an archive"), error);
-}
-
-void Unpacker::runDialog(const QList<FileEntry>& files)
-{
-	m_dialog.load(files);
-	connect(m_dialog.pushUnpack, SIGNAL(clicked()), this, SLOT(unpack()));
-	connect(m_dialog.pushAbort, SIGNAL(clicked()), this, SLOT(abort()));
-	connect(m_dialog.pushHide, SIGNAL(clicked()), this, SLOT(minimize()));
-	connect(m_dialog.pushPipe, SIGNAL(clicked()), this, SLOT(pipe()));
-	
-	m_dialog.show();
-}
-
-void Unpacker::unpack()
-{
-	QString dest = QFileDialog::getExistingDirectory(getMainWindow(), QObject::tr("Unpack an archive"), m_strFile);
-	if(dest.isEmpty())
-		return;
-	
-	m_dialog.pushUnpack->setEnabled(false);
-	m_dialog.pushAbort->setEnabled(true);
-	extract(m_dialog.getStates(), dest);
-}
-
-void Unpacker::abort()
-{
-	if(isRunning())
-		m_bAbort = true;
-	else
-		deleteLater();
-}
-
-void Unpacker::pipe()
-{
-	QList<bool> files = m_dialog.getStates();
-	if(!files.contains(true))
-		return;
-	
-	PipeDlg dlg(&m_dialog);
-	if(dlg.exec() != QDialog::Accepted)
-		return;
-	
-	QProcess* prs = new QProcess;
-	prs->start("sh", QStringList() << "-c" << dlg.m_strCommand);
-	
-	if(!prs->waitForStarted(3000))
+	while (written < length)
 	{
-		QMessageBox::critical(&m_dialog, "FatRat", tr("Failed to execute the command."));
-		delete prs;
-		return;
-	}
-	
-	m_dialog.pushUnpack->setEnabled(false);
-	m_dialog.pushAbort->setEnabled(true);
-	
-	connect(prs, SIGNAL(finished(int, QProcess::ExitStatus)), prs, SLOT(deleteLater()));
-	this->pipe(files.indexOf(true), prs);
-}
-
-void Unpacker::minimize()
-{
-	m_dialog.hide();
-}
-
-void Unpacker::setFileProgress(int index, int nProgress)
-{
-	UnpackDlg* dlg = &m_dialog;
-	QMetaObject::invokeMethod(dlg, [dlg, index, nProgress]() { dlg->setFileProgress(index, nProgress); }, Qt::QueuedConnection);
-}
-
-// Returns false when the command has terminated or the extraction was aborted
-bool Unpacker::writeToPipe(QPointer<QProcess> process, const char* data, qint64 length)
-{
-	QByteArray chunk(data, length);
-	bool running = false;
-	
-	QMetaObject::invokeMethod(this, [process, chunk, &running]() {
-		running = process && process->state() == QProcess::Running;
-		if(running)
-			process->write(chunk);
-	}, Qt::BlockingQueuedConnection);
-	
-	if(!running)
-		return false;
-	
-	while(true)
-	{
-		qint64 pending = 0;
-		QMetaObject::invokeMethod(this, [process, &pending]() {
-			if(process)
-				pending = process->bytesToWrite();
-		}, Qt::BlockingQueuedConnection);
-		
-		if(pending < MAX_PIPE_BUFFER)
-			return true;
-		if(m_bAbort)
+		qint64 n = device->write(data + written, length - written);
+		if (n < 0)
 			return false;
-		msleep(20);
+		written += n;
 	}
-}
 
-void Unpacker::closePipe(QPointer<QProcess> process)
-{
-	QMetaObject::invokeMethod(this, [process]() {
-		if(process)
-			process->closeWriteChannel();
-	}, Qt::QueuedConnection);
+	while (device->bytesToWrite() > MAX_PIPE_BUFFER)
+	{
+		if (cancelled())
+			return false;
+		device->waitForBytesWritten(20);
+	}
+	return true;
 }

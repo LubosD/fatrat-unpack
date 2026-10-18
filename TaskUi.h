@@ -2,7 +2,7 @@
 FatRat download manager
 http://fatrat.dolezel.info
 
-Copyright (C) 2006-2008 Lubos Dolezel <lubos a dolezel.info>
+Copyright (C) 2006-2026 Lubos Dolezel <lubos a dolezel.info>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,18 +18,24 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef PROGRESSWIDGET_H
-#define PROGRESSWIDGET_H
-#include <QWidget>
-#include "ui_ProgressWidget.h"
+#ifndef TASKUI_H
+#define TASKUI_H
+#include "UnpackUi.h"
 
-class ProgressWidget : public QWidget, public Ui_ProgressWidget
+class Task;
+
+// UnpackUi over a real plugin Task, used outside the tests.
+class TaskUi : public UnpackUi
 {
 public:
-	ProgressWidget()
-	{
-		setupUi(this);
-	}
+	explicit TaskUi(Task* task) : m_task(task) {}
+
+	std::optional<QJsonObject> ask(const QJsonObject& form, int timeoutMs) override;
+	void setProgress(int percent) override;
+	void setStatus(const QString& text) override;
+	bool cancelled() const override;
+private:
+	Task* m_task;
 };
 
 #endif

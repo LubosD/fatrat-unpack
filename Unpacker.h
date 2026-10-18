@@ -2,7 +2,7 @@
 FatRat download manager
 http://fatrat.dolezel.info
 
-Copyright (C) 2006-2008 Lubos Dolezel <lubos a dolezel.info>
+Copyright (C) 2006-2026 Lubos Dolezel <lubos a dolezel.info>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -20,55 +20,64 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #ifndef UNPACKER_H
 #define UNPACKER_H
-#include <QThread>
+#include <QCoreApplication>
+#include <QIODevice>
 #include <QList>
-#include <QProcess>
-#include <QPointer>
-#include <QRegularExpression>
-#include "UnpackDlg.h"
+#include <QString>
+#include <optional>
 
-class ProgressWidget;
+#include "UnpackUi.h"
 
-class Unpacker : public QThread
+struct FileEntry
 {
-Q_OBJECT
-public:
-	Unpacker(QString file);
-	virtual ~Unpacker();
-protected:
-	void setProgress(int nProgress);
-	void setFileProgress(int index, int nProgress);
-	void setToolTip(QString toolTip);
-	
-	void runDialog(const QList<FileEntry>& files);
-	virtual void extract(QList<bool> files, QString where) = 0;
-	virtual void pipe(int fileIndex, QProcess* process) = 0;
-	
-	// For the extraction thread: the QProcess lives in the GUI thread and
-	// deletes itself once the command exits
-	bool writeToPipe(QPointer<QProcess> process, const char* data, qint64 length);
-	void closePipe(QPointer<QProcess> process);
-protected slots:
-	// Safe to call from the extraction thread via a queued invokeMethod
-	void showError(QString error);
-	void unpack();
-	void abort();
-	void minimize();
-	void pipe();
-private:
-	ProgressWidget* m_widget;
-	UnpackDlg m_dialog;
-protected:
-	bool m_bAbort;
-	QString m_strFile;
+	QString name;
+	qint64 size;
 };
 
-struct UnpackerEntry
+/* Base of the unpackers (RarUnpacker, ArchiveUnpacker, FileConcater). An
+ * Unpacker is driven synchronously, start to finish, by UnpackTask on its own
+ * worker thread: list() to see what is inside, then extract() or pipe().
+ *
+ * Every method may throw a QString (an error message for Task::finish()) or
+ * NoAnswer (a required question went unanswered, see UnpackUi.h).
+ */
+class Unpacker
 {
-	QRegularExpression re;
-	QThread* (*pCreate)(QString /*file*/, QString /*comment*/);
-	bool (*pSupported)(QString /*file*/);
+	Q_DECLARE_TR_FUNCTIONS(Unpacker)
+public:
+	Unpacker(const QString& file, UnpackUi& ui) : m_ui(ui), m_strFile(file) {}
+	virtual ~Unpacker() = default;
+
+	virtual QList<FileEntry> list() = 0;
+	virtual void extract(const QList<bool>& files, const QString& where) = 0;
+	// fileIndex is an index into list()'s result. The device is really a
+	// QProcess's stdin, handed over as a QIODevice so Unpacker subclasses
+	// don't need to know about QProcess at all.
+	virtual void pipe(int fileIndex, QIODevice* device) = 0;
+
+	// UnpackTask calls this right after construction, before list(). Kept out
+	// of the constructor (and so out of UnpackerEntry::pCreate) because it's
+	// only ever used for the password form.
+	void setTransferComment(const QString& comment) { m_strTransferComment = comment; }
+
+protected:
+	bool cancelled() const { return m_ui.cancelled(); }
+	void setProgress(int percent) { m_ui.setProgress(percent); }
+	void setStatus(const QString& text) { m_ui.setStatus(text); }
+
+	// Asks for a password. `wrongBefore` shows "The password is incorrect."
+	// (the caller already tried one). Throws NoAnswer if the user gives none.
+	QByteArray askPassword(const QString& archiveComment, bool wrongBefore);
+
+	// Writes `length` bytes to `device` (really the pipe command's stdin),
+	// blocking while more than 4MB is still unwritten. Returns false once
+	// writing fails or the task is cancelled while waiting. UnpackTask owns
+	// the QProcess itself and closes its write channel once pipe() returns.
+	bool writeToPipe(QIODevice* device, const char* data, qint64 length);
+
+	UnpackUi& m_ui;
+	QString m_strFile;
+	QString m_strTransferComment;
 };
 
 #endif
-

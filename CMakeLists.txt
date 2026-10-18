@@ -4,12 +4,12 @@ project(fatrat-unpack LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
 
 option(WITH_NLS "Install translations" OFF)
 option(WITH_LIBARCHIVE "Support 7z and ZIP archives (requires libarchive)" OFF)
 # WITH_ZIP used to enable the libzip based ZIP support
 option(WITH_ZIP "Deprecated alias of WITH_LIBARCHIVE" OFF)
+option(WITH_TESTS "Build the unit tests (run them with ctest)" OFF)
 option(WITH_EVERYTHING "Enable all optional features" OFF)
 
 if(WITH_EVERYTHING)
@@ -22,20 +22,24 @@ if(WITH_ZIP)
 	set(WITH_LIBARCHIVE ON)
 endif(WITH_ZIP)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Network Xml LinguistTools)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Network Xml LinguistTools)
+if(WITH_TESTS)
+	find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
+endif(WITH_TESTS)
 
-# FatRat's development headers (installed under <prefix>/include/fatrat)
+# FatRat's development headers (installed under <prefix>/include/fatrat). Any
+# flavour works (desktop or headless) -- but build against the headers of the
+# FatRat this plugin will actually be loaded into: Transfer's layout differs
+# between the two.
 find_path(FATRAT_INCLUDE_DIR NAMES fatrat/fatrat.h fatrat/config.h)
 if(NOT FATRAT_INCLUDE_DIR)
 	message(FATAL_ERROR "No FatRat development headers found, set FATRAT_INCLUDE_DIR")
 endif(NOT FATRAT_INCLUDE_DIR)
 message(STATUS "FatRat headers: ${FATRAT_INCLUDE_DIR}/fatrat")
 
-# This plugin is a GUI plugin and must be installed where FatRat looks for plugins
-file(STRINGS "${FATRAT_INCLUDE_DIR}/fatrat/config.h" FATRAT_GUI_DEFINE REGEX "^#define WITH_GUI")
-if(NOT FATRAT_GUI_DEFINE)
-	message(FATAL_ERROR "FatRat was built without WITH_GUI, the unpack plugin needs the GUI")
-endif(NOT FATRAT_GUI_DEFINE)
+if(NOT EXISTS "${FATRAT_INCLUDE_DIR}/fatrat/plugins/PluginApi.h")
+	message(FATAL_ERROR "fatrat-unpack needs a FatRat with the plugin API (fatrat/plugins/PluginApi.h); FatRat 1.3.1 and older do not have it")
+endif(NOT EXISTS "${FATRAT_INCLUDE_DIR}/fatrat/plugins/PluginApi.h")
 
 if(NOT FATRAT_PLUGIN_DIR)
 	file(STRINGS "${FATRAT_INCLUDE_DIR}/fatrat/config.h" FATRAT_PLUGIN_DEFINE REGEX "^#define PLUGIN_LOCATION ")
@@ -59,19 +63,13 @@ configure_file(unpack_config.h.in unpack_config.h)
 
 set(fatrat-unpack_SRCS
 	fr_unpack.cpp
+	Archivators.cpp Archivators.h
+	UnpackUi.h
+	TaskUi.cpp TaskUi.h
+	UnpackTask.cpp UnpackTask.h
 	Unpacker.cpp Unpacker.h
 	RarUnpacker.cpp RarUnpacker.h
-	UnpackDlg.cpp UnpackDlg.h
 	FileConcater.cpp FileConcater.h
-	PasswordDlg.h
-	PipeDlg.h
-	FilesDlg.h
-	ProgressWidget.h
-	ProgressWidget.ui
-	PasswordDlg.ui
-	UnpackDlg.ui
-	FilesDlg.ui
-	PipeDlg.ui
 	)
 
 if(WITH_LIBARCHIVE)
@@ -84,7 +82,7 @@ set_target_properties(fatrat-unpack PROPERTIES PREFIX "" CXX_VISIBILITY_PRESET h
 target_include_directories(fatrat-unpack PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 	${FATRAT_INCLUDE_DIR} ${FATRAT_INCLUDE_DIR}/fatrat)
-target_link_libraries(fatrat-unpack PRIVATE Qt6::Core Qt6::Widgets Qt6::Network Qt6::Xml unrar)
+target_link_libraries(fatrat-unpack PRIVATE Qt6::Core Qt6::Network Qt6::Xml unrar)
 if(WITH_LIBARCHIVE)
 	target_link_libraries(fatrat-unpack PRIVATE PkgConfig::LIBARCHIVE)
 endif(WITH_LIBARCHIVE)
@@ -113,3 +111,8 @@ install(FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/data/3RDPARTIES
 	DESTINATION share/doc/fatrat-unpack
 	)
+
+if(WITH_TESTS)
+	enable_testing()
+	add_subdirectory(autotests)
+endif(WITH_TESTS)

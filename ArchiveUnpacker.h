@@ -34,25 +34,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 struct archive;
 struct archive_entry;
 
-// 7z and ZIP archives, read through libarchive
+// 7z and ZIP archives, read through libarchive.
 class ArchiveUnpacker : public Unpacker
 {
-Q_OBJECT
 public:
-	ArchiveUnpacker(QString file, QString transferComment);
-	virtual ~ArchiveUnpacker();
+	ArchiveUnpacker(const QString& file, UnpackUi& ui);
 
-	static QThread* create(QString file, QString transferComment) { return new ArchiveUnpacker(file, transferComment); }
-	static bool supported(QString file);
+	static Unpacker* create(const QString& file, UnpackUi& ui) { return new ArchiveUnpacker(file, ui); }
+	static bool supported(const QString& file);
 
-	virtual void run();
-	virtual void extract(QList<bool> files, QString where);
-	virtual void pipe(int fileIndex, QProcess* process);
-private slots:
-	void askPassword(QByteArray* out);
+	QList<FileEntry> list() override;
+	void extract(const QList<bool>& files, const QString& where) override;
+	void pipe(int fileIndex, QIODevice* device) override;
 private:
-	void processArchive();
 	struct archive* openArchive(bool askPasswords);
+	void runExtraction();
 	void extractEntry(struct archive* a, int i);
 	static QString archiveError(struct archive* a);
 	static QString entryName(struct archive_entry* entry);
@@ -60,22 +56,25 @@ private:
 	static const char* passphraseCallback(struct archive* a, void* data);
 	bool piping() const { return m_nFileIndex != -1; }
 private:
-	QString m_strCommentTransfer;
 	QDir m_dirDestination;
 	QByteArray m_strPassword;
 
 	QList<FileEntry> m_files;
-	// For each file in m_files, its position among all the archive's entries
+	// For each file in m_files, its position among all the archive's entries.
 	QList<int> m_entryIndexes;
 	QList<QDateTime> m_mtimes;
 	QList<bool> m_filesValues;
-	qint64 m_nTotal, m_nDone;
-	int m_nPercents;
+	qint64 m_nTotal = 0, m_nDone = 0;
+	int m_nPercents = -1;
+	int m_nSelectedTotal = 0, m_nSelectedDone = 0;
+	// How many passphraseCallback() calls happened for the current open; > 1
+	// means the previous one was wrong.
+	int m_nPasswordAttempts = 0;
+	bool m_bNoAnswer = false;
 
 	// for piping only
-	// QProcess deletes itself when the command exits
-	QPointer<QProcess> m_pipe;
-	int m_nFileIndex;
+	QIODevice* m_pipeDevice = nullptr;
+	int m_nFileIndex = -1;
 };
 
 #endif

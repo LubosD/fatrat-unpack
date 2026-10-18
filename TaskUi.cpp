@@ -2,7 +2,7 @@
 FatRat download manager
 http://fatrat.dolezel.info
 
-Copyright (C) 2006-2008 Lubos Dolezel <lubos a dolezel.info>
+Copyright (C) 2006-2026 Lubos Dolezel <lubos a dolezel.info>
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -18,19 +18,25 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef FILESDLG_H
-#define FILESDLG_H
-#include <QDialog>
-#include "ui_FilesDlg.h"
+#include "TaskUi.h"
+#include "plugins/Task.h"
 
-class FilesDlg : public QDialog, public Ui_FilesDlg
+std::optional<QJsonObject> TaskUi::ask(const QJsonObject& form, int timeoutMs)
 {
-public:
-	FilesDlg(QWidget* parent = 0)
-	: QDialog(parent)
-	{
-		setupUi(this);
-	}
-};
+	return m_task->askBlocking(form, timeoutMs);
+}
 
-#endif
+void TaskUi::setProgress(int percent)
+{
+	m_task->setProgress(percent);
+}
+
+void TaskUi::setStatus(const QString& text)
+{
+	m_task->setStatus(text);
+}
+
+bool TaskUi::cancelled() const
+{
+	return m_task->cancelRequested();
+}

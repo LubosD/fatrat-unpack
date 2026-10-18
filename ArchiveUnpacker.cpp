@@ -19,33 +19,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "ArchiveUnpacker.h"
-#include "PasswordDlg.h"
 #include <QFile>
 #include <QFileInfo>
-#include <QtDebug>
 #include <archive.h>
 #include <archive_entry.h>
 
-ArchiveUnpacker::ArchiveUnpacker(QString file, QString transferComment)
-	: Unpacker(file), m_strCommentTransfer(transferComment), m_nTotal(0), m_nDone(0),
-		m_nPercents(0), m_nFileIndex(-1)
-{
-	processArchive();
-}
-
-ArchiveUnpacker::~ArchiveUnpacker()
+ArchiveUnpacker::ArchiveUnpacker(const QString& file, UnpackUi& ui)
+	: Unpacker(file, ui)
 {
 }
 
-bool ArchiveUnpacker::supported(QString file)
+bool ArchiveUnpacker::supported(const QString& file)
 {
+	Q_UNUSED(file);
 	return true;
 }
 
 QString ArchiveUnpacker::archiveError(struct archive* a)
 {
 	const char* str = archive_error_string(a);
-	if(!str)
+	if (!str)
 		return tr("Cannot read the archive.");
 	return QString::fromLocal8Bit(str);
 }
@@ -53,21 +46,21 @@ QString ArchiveUnpacker::archiveError(struct archive* a)
 QString ArchiveUnpacker::entryName(struct archive_entry* entry)
 {
 	const char* name = archive_entry_pathname_utf8(entry);
-	if(name)
+	if (name)
 		return QString::fromUtf8(name);
 	return QFile::decodeName(archive_entry_pathname(entry));
 }
 
-// Refuse names that would end up outside of the destination directory
+// Refuse names that would end up outside of the destination directory.
 bool ArchiveUnpacker::isSafePath(const QString& name)
 {
-	if(name.isEmpty() || QDir::isAbsolutePath(name))
+	if (name.isEmpty() || QDir::isAbsolutePath(name))
 		return false;
 
 	const QStringList parts = name.split('/');
-	for(const QString& part : parts)
+	for (const QString& part : parts)
 	{
-		if(part == "..")
+		if (part == "..")
 			return false;
 	}
 	return true;
@@ -79,10 +72,10 @@ struct archive* ArchiveUnpacker::openArchive(bool askPasswords)
 	archive_read_support_format_7zip(a);
 	archive_read_support_format_zip_seekable(a);
 
-	if(askPasswords)
+	if (askPasswords)
 		archive_read_set_passphrase_callback(a, this, passphraseCallback);
 
-	if(archive_read_open_filename(a, QFile::encodeName(m_strFile).constData(), 64*1024) != ARCHIVE_OK)
+	if (archive_read_open_filename(a, QFile::encodeName(m_strFile).constData(), 64 * 1024) != ARCHIVE_OK)
 	{
 		QString error = archiveError(a);
 		archive_read_free(a);
@@ -91,240 +84,227 @@ struct archive* ArchiveUnpacker::openArchive(bool askPasswords)
 	return a;
 }
 
-void ArchiveUnpacker::processArchive()
+QList<FileEntry> ArchiveUnpacker::list()
 {
-	struct archive* a = 0;
+	struct archive* a = openArchive(false);
 
 	try
 	{
-		a = openArchive(false);
-
-		for(int index = 0; ; index++)
+		for (int index = 0;; index++)
 		{
 			struct archive_entry* entry;
 			int r = archive_read_next_header(a, &entry);
 
-			if(r == ARCHIVE_EOF)
+			if (r == ARCHIVE_EOF)
 				break;
-			else if(r < ARCHIVE_WARN)
+			else if (r < ARCHIVE_WARN)
 				throw archiveError(a);
 
-			if(archive_entry_filetype(entry) != AE_IFREG)
+			if (archive_entry_filetype(entry) != AE_IFREG)
 				continue;
 
 			FileEntry file;
 			file.name = entryName(entry);
 			file.size = archive_entry_size_is_set(entry) ? archive_entry_size(entry) : 0;
 
-			if(!isSafePath(file.name))
-			{
-				qWarning() << "Skipping an archive entry with an unsafe name:" << file.name;
-				continue;
-			}
+			if (!isSafePath(file.name))
+				continue; // an archive entry with an unsafe name
 
-			// libarchive can list encrypted 7z archives, but not extract them
-			if(archive_entry_is_data_encrypted(entry) && archive_format(a) == ARCHIVE_FORMAT_7ZIP)
+			// libarchive can list encrypted 7z archives, but not extract them.
+			if (archive_entry_is_data_encrypted(entry) && archive_format(a) == ARCHIVE_FORMAT_7ZIP)
 				throw tr("Encrypted 7z archives are not supported.");
 
 			m_files << file;
 			m_entryIndexes << index;
 			m_mtimes << (archive_entry_mtime_is_set(entry) ? QDateTime::fromSecsSinceEpoch(archive_entry_mtime(entry)) : QDateTime());
 		}
-
-		archive_read_free(a);
-		a = 0;
-
-		if(m_files.isEmpty())
-			throw tr("The archive contains no files.");
-
-		runDialog(m_files);
 	}
-	catch(QString error)
+	catch (...)
 	{
-		if(a)
-			archive_read_free(a);
-
-		showError(error);
-		deleteLater();
+		archive_read_free(a);
+		throw;
 	}
+	archive_read_free(a);
+
+	if (m_files.isEmpty())
+		throw tr("The archive contains no files.");
+	return m_files;
 }
 
-void ArchiveUnpacker::askPassword(QByteArray* out)
-{
-	PasswordDlg dlg;
-	dlg.m_strCommentTransfer = m_strCommentTransfer;
-
-	if(dlg.exec() == QDialog::Accepted)
-		*out = dlg.m_strPassword.toUtf8();
-}
-
-// Called from the extraction thread whenever libarchive needs another password
-// to try; libarchive keeps the ones it was given for the remaining entries
+// Called by libarchive, possibly more than once per open (it retries the
+// passphrase itself on a wrong one). May not throw: see RarUnpacker::rarCallback.
 const char* ArchiveUnpacker::passphraseCallback(struct archive* a, void* data)
 {
+	Q_UNUSED(a);
 	ArchiveUnpacker* This = static_cast<ArchiveUnpacker*>(data);
-	QByteArray pass;
 
-	if(This->m_bAbort)
-		return 0;
+	if (This->cancelled())
+		return nullptr;
 
-	QMetaObject::invokeMethod(This, "askPassword", Qt::BlockingQueuedConnection, Q_ARG(QByteArray*, &pass));
-	if(pass.isEmpty())
-		return 0;
+	This->m_nPasswordAttempts++;
+	try
+	{
+		This->m_strPassword = This->askPassword(QString(), This->m_nPasswordAttempts > 1);
+	}
+	catch (const NoAnswer&)
+	{
+		This->m_bNoAnswer = true;
+		return nullptr;
+	}
 
-	This->m_strPassword = pass;
+	if (This->m_strPassword.isEmpty())
+		return nullptr;
 	return This->m_strPassword.constData();
 }
 
-void ArchiveUnpacker::extract(QList<bool> files, QString where)
+void ArchiveUnpacker::extract(const QList<bool>& files, const QString& where)
 {
 	m_filesValues = files;
 	m_dirDestination = QDir(where);
-	start();
+	m_nFileIndex = -1;
+	runExtraction();
 }
 
-void ArchiveUnpacker::pipe(int fileIndex, QProcess* process)
+void ArchiveUnpacker::pipe(int fileIndex, QIODevice* device)
 {
-	m_pipe = process;
+	m_pipeDevice = device;
 	m_nFileIndex = fileIndex;
-	start();
+	runExtraction();
 }
 
 void ArchiveUnpacker::extractEntry(struct archive* a, int i)
 {
 	QFile file;
-	char buffer[64*1024];
-	int percents = -1;
-	qint64 pos = 0;
+	char buffer[64 * 1024];
 
-	if(!piping())
+	if (!piping())
 	{
 		QString fpath = m_dirDestination.filePath(m_files[i].name);
 		m_dirDestination.mkpath(QFileInfo(m_files[i].name).path());
 
 		file.setFileName(fpath);
-		if(!file.open(QIODevice::WriteOnly))
+		if (!file.open(QIODevice::WriteOnly))
 			throw tr("Unable to open %1 for writing.").arg(fpath);
 
-		setToolTip(tr("Extracting %1...").arg(m_files[i].name));
+		setStatus(tr("%1 (%2 of %3)").arg(m_files[i].name).arg(++m_nSelectedDone).arg(m_nSelectedTotal));
 	}
 	else
-		setToolTip(tr("Piping %1...").arg(m_files[i].name));
+		setStatus(tr("Piping %1...").arg(m_files[i].name));
 
 	try
 	{
-		while(true)
+		while (true)
 		{
 			la_ssize_t rd = archive_read_data(a, buffer, sizeof(buffer));
-			if(rd < 0)
+			if (rd < 0)
 				throw archiveError(a);
-			if(rd == 0)
+			if (rd == 0)
 				break;
-			if(m_bAbort)
+			if (cancelled())
 				throw QString();
 
-			if(piping())
+			if (piping())
 			{
-				if(!writeToPipe(m_pipe, buffer, rd))
-					throw m_bAbort ? QString() : tr("The command has terminated.");
+				if (!writeToPipe(m_pipeDevice, buffer, rd))
+					throw tr("The command has terminated.");
 			}
-			else if(file.write(buffer, rd) != rd)
+			else if (file.write(buffer, rd) != rd)
 				throw tr("Unable to write the extracted data.");
 
-			pos += rd;
 			m_nDone += rd;
 
-			if(m_nTotal)
+			if (m_nTotal)
 			{
-				int pcts = 100*m_nDone/m_nTotal;
-				if(pcts > m_nPercents)
+				int pcts = 100 * m_nDone / m_nTotal;
+				if (pcts > m_nPercents)
 					setProgress(m_nPercents = pcts);
-			}
-			if(m_files[i].size)
-			{
-				int pcts = 100*pos/m_files[i].size;
-				if(pcts > percents)
-					setFileProgress(i, percents = pcts);
 			}
 		}
 	}
-	catch(...)
+	catch (...)
 	{
-		// Don't leave a truncated file behind
-		if(file.isOpen())
+		if (file.isOpen())
 			file.remove();
 		throw;
 	}
 
-	if(!piping())
+	if (!piping())
 	{
 		file.flush();
-		if(m_mtimes[i].isValid())
+		if (m_mtimes[i].isValid())
 			file.setFileTime(m_mtimes[i], QFileDevice::FileModificationTime);
 	}
 }
 
-void ArchiveUnpacker::run()
+void ArchiveUnpacker::runExtraction()
 {
-	struct archive* a = 0;
+	int last = -1;
+	m_nSelectedTotal = 0;
+	for (int i = 0; i < m_files.size(); i++)
+	{
+		if (piping() ? i == m_nFileIndex : m_filesValues[i])
+		{
+			last = i;
+			m_nSelectedTotal++;
+		}
+	}
+
+	// Skipping over a file in a solid 7z archive means decompressing it, so
+	// the files skipped on the way to the last selected one count too.
+	m_nTotal = 0;
+	for (int i = 0; i <= last; i++)
+		m_nTotal += m_files[i].size;
+	m_nDone = 0;
+	m_nPercents = -1;
+	m_nSelectedDone = 0;
+
+	m_nPasswordAttempts = 0;
+	m_bNoAnswer = false;
+
+	struct archive* a = openArchive(true);
 
 	try
 	{
-		int last = -1;
-		for(int i=0;i<m_files.size();i++)
-		{
-			if(piping() ? i == m_nFileIndex : m_filesValues[i])
-				last = i;
-		}
-
-		// Skipping over a file in a solid 7z archive means decompressing it,
-		// so the files skipped on the way to the last selected one count too
-		m_nTotal = 0;
-		for(int i=0;i<=last;i++)
-			m_nTotal += m_files[i].size;
-
-		a = openArchive(true);
-
-		for(int index = 0, i = 0; i <= last; index++)
+		for (int index = 0, i = 0; i <= last; index++)
 		{
 			struct archive_entry* entry;
 			int r = archive_read_next_header(a, &entry);
 
-			if(r == ARCHIVE_EOF)
+			if (r == ARCHIVE_EOF)
 				throw tr("The archive is truncated or has changed.");
-			else if(r < ARCHIVE_WARN)
+			else if (r < ARCHIVE_WARN)
+			{
+				if (m_bNoAnswer)
+					throw NoAnswer{};
 				throw archiveError(a);
+			}
 
-			if(index != m_entryIndexes[i])
+			if (index != m_entryIndexes[i])
 				continue;
 
-			if(piping() ? i == m_nFileIndex : m_filesValues[i])
+			if (piping() ? i == m_nFileIndex : m_filesValues[i])
 				extractEntry(a, i);
 			else
 			{
-				if(archive_read_data_skip(a) < ARCHIVE_WARN)
+				if (archive_read_data_skip(a) < ARCHIVE_WARN)
+				{
+					if (m_bNoAnswer)
+						throw NoAnswer{};
 					throw archiveError(a);
+				}
 				m_nDone += m_files[i].size;
 			}
 
-			if(m_bAbort)
-				throw QString();
 			i++;
 		}
-
-		setProgress(100);
 	}
-	catch(QString error)
+	catch (...)
 	{
-		if(!error.isEmpty())
-			QMetaObject::invokeMethod(this, "showError", Qt::QueuedConnection, Q_ARG(QString, error));
+		archive_read_free(a);
+		throw;
 	}
 
-	if(a)
-		archive_read_free(a);
-
-	if(piping())
-		closePipe(m_pipe);
-
-	connect(this, SIGNAL(finished()), this, SLOT(deleteLater()));
+	archive_read_free(a);
+	if (m_bNoAnswer)
+		throw NoAnswer{};
 }
