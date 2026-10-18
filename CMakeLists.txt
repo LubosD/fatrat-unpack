@@ -41,6 +41,13 @@ if(NOT EXISTS "${FATRAT_INCLUDE_DIR}/fatrat/plugins/PluginApi.h")
 	message(FATAL_ERROR "fatrat-unpack needs a FatRat with the plugin API (fatrat/plugins/PluginApi.h); FatRat 1.3.1 and older do not have it")
 endif(NOT EXISTS "${FATRAT_INCLUDE_DIR}/fatrat/plugins/PluginApi.h")
 
+# A desktop FatRat's fatrat.h includes <QIcon>. The plugin uses nothing from
+# Qt GUI itself, but needs its headers to compile against such a FatRat.
+file(STRINGS "${FATRAT_INCLUDE_DIR}/fatrat/config.h" FATRAT_GUI_DEFINE REGEX "^#define WITH_GUI")
+if(FATRAT_GUI_DEFINE)
+	find_package(Qt6 6.5 REQUIRED COMPONENTS Gui)
+endif(FATRAT_GUI_DEFINE)
+
 if(NOT FATRAT_PLUGIN_DIR)
 	file(STRINGS "${FATRAT_INCLUDE_DIR}/fatrat/config.h" FATRAT_PLUGIN_DEFINE REGEX "^#define PLUGIN_LOCATION ")
 	string(REGEX REPLACE "^#define PLUGIN_LOCATION \"(.*)\"$" "\\1" FATRAT_PLUGIN_DIR "${FATRAT_PLUGIN_DEFINE}")
@@ -83,6 +90,9 @@ target_include_directories(fatrat-unpack PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
 	${FATRAT_INCLUDE_DIR} ${FATRAT_INCLUDE_DIR}/fatrat)
 target_link_libraries(fatrat-unpack PRIVATE Qt6::Core Qt6::Network Qt6::Xml unrar)
+if(FATRAT_GUI_DEFINE)
+	target_link_libraries(fatrat-unpack PRIVATE Qt6::Gui)
+endif(FATRAT_GUI_DEFINE)
 if(WITH_LIBARCHIVE)
 	target_link_libraries(fatrat-unpack PRIVATE PkgConfig::LIBARCHIVE)
 endif(WITH_LIBARCHIVE)
